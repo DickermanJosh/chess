@@ -59,7 +59,7 @@ public class Square : MonoBehaviour
         return BoardPosInArray == ((Square)other).BoardPosInArray;
     }
 
-    public void AddPieceToSquare(string type, bool isWhite)
+    public void AddPieceToSquare(string type, bool isWhite, bool isFlipped)
     {
         var position = transform.position;
         _pieceObject = Instantiate(pieceToAdd, new Vector3(position.x,position.y,-0.6f), Quaternion.identity);
@@ -71,6 +71,7 @@ public class Square : MonoBehaviour
             pieceComponent.isWhitePiece = isWhite;
             pieceComponent.type = type;
             pieceComponent.pos = pos;
+            pieceComponent.isFlipped = isFlipped;
         }
         else
         {

@@ -66,24 +66,25 @@ public class BoardManager : MonoBehaviour
             squareToMove.RemovePieceFromSquare();
         }
 
-        if (LegalMovesHandler.CanEnPassant)
+        if (FENHandler.EnPassantSquare != "-")
         {
-            if (squareToMove.BoardPosInArray == _legalMoves[LegalMovesHandler.EnPassantMoveNum].BoardPosInArray)
+            Debug.Log(FENHandler.EnPassantSquare);
+            if (squareToMove.BoardPosInArray == LegalMovesHandler.EnPassantMoveNum)
             {
                 if (!isWhite)
                 {
-                    var index = squareToMove.BoardPosInArray + 1;
+                    var index = squareToMove.BoardPosInArray + 8;
                     Board[index].RemovePieceFromSquare();
                 }
                 else
                 {
-                    var index = squareToMove.BoardPosInArray - 1;
+                    var index = squareToMove.BoardPosInArray - 8;
                     Board[index].RemovePieceFromSquare();
                 }
             }
         }
 
-        Board[squareToMove.BoardPosInArray].AddPieceToSquare(pieceType, isWhite);
+        Board[squareToMove.BoardPosInArray].AddPieceToSquare(pieceType, isWhite, UIManager.isFlipped);
         Board[SelectedSquare.BoardPosInArray].RemovePieceFromSquare();
 
         var from = SelectedSquare.file + SelectedSquare.rank.ToString();

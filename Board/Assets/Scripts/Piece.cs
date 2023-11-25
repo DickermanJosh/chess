@@ -4,6 +4,7 @@ public class Piece : MonoBehaviour
 {
     public string type;
     public bool isWhitePiece;
+    public bool isFlipped;
     public Vector2 pos;
     private SpriteRenderer _spriteRenderer;
 
@@ -16,10 +17,10 @@ public class Piece : MonoBehaviour
 
     private void Start()
     {
-        SetPieceSprite(type,isWhitePiece);
+        SetPieceSprite(type,isWhitePiece, isFlipped);
     }
 
-    private void SetPieceSprite(string pieceType, bool isWhite)
+    private void SetPieceSprite(string pieceType, bool isWhite, bool isFlipped)
     {
         string spriteName;
         //string spriteName = !isWhite ? "white" + pieceType : "black" + pieceType;
@@ -34,6 +35,10 @@ public class Piece : MonoBehaviour
         
         //Sprite sprite = pieceSprites.GetSprite(spriteName);
         _spriteRenderer.sprite = GetSpriteByName(spriteName);
+        if (isFlipped)
+            _spriteRenderer.transform.rotation = Quaternion.Euler(0, 0, 180);
+        else
+            _spriteRenderer.transform.rotation = Quaternion.Euler(0, 0, 0);
     }
 
     private Sprite GetSpriteByName(string spriteName)

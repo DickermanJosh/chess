@@ -27,8 +27,8 @@ public class MoveTracker : MonoBehaviour
     }
 
     private void Start()
-    {
-        IsWhiteToMove = true;
+    { 
+        IsWhiteToMove = true; // If WhiteToMove is not defined here the initial text display will be reversed for the first full move
         MovesPlayed = 0;
         DisplayPlayerToMove();
         //LegalMovesHandler.SquaresAttackedByWhite();

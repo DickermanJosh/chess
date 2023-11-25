@@ -11,7 +11,12 @@ public class LegalMovesHandler : MonoBehaviour
     private static List<Square> _pseudoLegalMoveList;
     private static int _movesInList;
 
-    [Header("En-Passant Variables")] public static bool CanEnPassant;
+    [Header("Castling Rights from FEN")] public static bool WKingSideCastle;
+    public static bool BKingSideCastle;
+    public static bool WQueenSideCastle;
+    public static bool BQueenSideCastle;
+
+    [Header("En-Passant Variables")]
     public static int EnPassantMoveNum;
 
     private void Awake()
@@ -23,6 +28,10 @@ public class LegalMovesHandler : MonoBehaviour
     private void Start()
     {
         _pseudoLegalMoveList = new List<Square>();
+        WKingSideCastle = true;
+        BKingSideCastle = true;
+        WQueenSideCastle = true;
+        BQueenSideCastle = true;
     }
 
     public static Square[] FindPseudoLegalMoves(string pieceType, bool isWhite, int posInArray, char file, int rank,
@@ -31,7 +40,7 @@ public class LegalMovesHandler : MonoBehaviour
         _pseudoLegalMoveList.Clear();
         _movesInList = 0;
         var fileAsInt = (int)pos.x;
-        CanEnPassant = false;
+        FENHandler.EnPassantSquare = "-";
 
         switch (pieceType)
         {
@@ -292,8 +301,8 @@ public class LegalMovesHandler : MonoBehaviour
                 _movesInList++;
             }
 
-            // En passant
-            EnPassantCheck(posInArray, file, isPieceWhite);
+            if ((isPieceWhite && rank == 4) || (!isPieceWhite && rank == 3))
+                EnPassantCheck(posInArray, file, isPieceWhite);
         }
         else
             switch (file)
@@ -307,7 +316,8 @@ public class LegalMovesHandler : MonoBehaviour
                         _movesInList++;
                     }
 
-                    EnPassantCheck(posInArray, file, isPieceWhite);
+                    if ((isPieceWhite && rank == 4) || (!isPieceWhite && rank == 3))
+                        EnPassantCheck(posInArray, file, isPieceWhite);
 
                     break;
                 }
@@ -319,180 +329,75 @@ public class LegalMovesHandler : MonoBehaviour
                         _pseudoLegalMoveList.Add(BoardManager.Board[posInArray + rightOffset]);
                         _movesInList++;
                     }
-
-                    EnPassantCheck(posInArray, file, isPieceWhite);
+                    
+                    if ((isPieceWhite && rank == 4) || (!isPieceWhite && rank == 3))
+                        EnPassantCheck(posInArray, file, isPieceWhite);
 
                     break;
                 }
             }
         // End FindPseudoLegalPawnMoves
     }
-
-    // TODO: Maybe just throw all of this code out and do this instead:
-    // Only check for en passent on the 4th and 5th rank, that's the only place they can happen.
-    // Then, just check to each square besides the pawn, if it was a double pawn push add en passant.
-    // CONNECT TO FEN GENERATION
+    
     private static void EnPassantCheck(int posInArray, int file, bool isPieceWhite)
     {
+        var forwardOffset = 0;
+        var leftOffset = 0;
+        var rightOffset = 0;
         if (!isPieceWhite)
         {
-            switch (file)
-            {
-                case > 0 and < 7:
-                {
-                    if (MoveTracker.ToBoardPos == posInArray + 1 || MoveTracker.ToBoardPos == posInArray - 1)
-                    {
-                        var offset = MoveTracker.ToBoardPos - posInArray;
-
-                        if (BoardManager.Board[posInArray + offset].pieceOnSquare == "Pawn" &&
-                            BoardManager.Board[posInArray + offset].isPieceWhite)
-                        {
-                            if (MoveTracker.FromBoardPos == MoveTracker.ToBoardPos - 16)
-                            {
-                                if (!BoardManager.Board[posInArray + offset - 8].isOccupied)
-                                {
-                                    _pseudoLegalMoveList.Add(BoardManager.Board[posInArray + offset - 8]);
-                                    EnPassantMoveNum = _movesInList;
-                                    _movesInList++;
-                                    CanEnPassant = true;
-                                }
-                            }
-                        }
-                    }
-
-                    break;
-                }
-                case 0:
-                {
-                    if (MoveTracker.ToBoardPos == posInArray + 1)
-                    {
-                        const int offset = 1;
-
-                        if (BoardManager.Board[posInArray + offset].pieceOnSquare == "Pawn" &&
-                            BoardManager.Board[posInArray + offset].isPieceWhite)
-                        {
-                            if (MoveTracker.FromBoardPos == MoveTracker.ToBoardPos - 16)
-                            {
-                                if (!BoardManager.Board[posInArray + offset - 8].isOccupied)
-                                {
-                                    _pseudoLegalMoveList.Add(BoardManager.Board[posInArray + offset - 8]);
-                                    EnPassantMoveNum = _movesInList;
-                                    _movesInList++;
-                                    CanEnPassant = true;
-                                }
-                            }
-                        }
-                    }
-
-                    break;
-                }
-                case 7:
-                {
-                    if (MoveTracker.ToBoardPos == posInArray - 1)
-                    {
-                        const int offset = -8;
-
-                        if (BoardManager.Board[posInArray + offset].pieceOnSquare == "Pawn" &&
-                            BoardManager.Board[posInArray + offset].isPieceWhite)
-                        {
-                            if (MoveTracker.FromBoardPos == MoveTracker.ToBoardPos - 16)
-                            {
-                                if (!BoardManager.Board[posInArray + offset - 1].isOccupied)
-                                {
-                                    _pseudoLegalMoveList.Add(BoardManager.Board[posInArray + offset - 8]);
-                                    EnPassantMoveNum = _movesInList;
-                                    _movesInList++;
-                                    CanEnPassant = true;
-                                }
-                            }
-                        }
-                    }
-
-                    break;
-                }
-            }
+            forwardOffset = -8;
+            leftOffset = 1;
+            rightOffset = -1;
+            
         }
         else
         {
-            switch (file)
+            forwardOffset = 8;
+            leftOffset = -1;
+            rightOffset = 1;
+        }
+
+        switch (file)
+        {
+            case > 0 and < 7:
             {
-                case > 0 and < 7:
-                {
-                    if (MoveTracker.ToBoardPos == posInArray + 1 || MoveTracker.ToBoardPos == posInArray - 1)
-                    {
-                        var offset = MoveTracker.ToBoardPos - posInArray;
-
-                        if (BoardManager.Board[posInArray + offset].pieceOnSquare == "Pawn" &&
-                            !BoardManager.Board[posInArray + offset].isPieceWhite)
-                        {
-                            if (MoveTracker.FromBoardPos == MoveTracker.ToBoardPos + 16)
-                            {
-                                if (!BoardManager.Board[posInArray + offset + 8].isOccupied)
-                                {
-                                    _pseudoLegalMoveList.Add(BoardManager.Board[posInArray + offset + 8]);
-                                    EnPassantMoveNum = _movesInList;
-                                    _movesInList++;
-                                    CanEnPassant = true;
-                                }
-                            }
-                        }
-                    }
-
-                    break;
-                }
-                case 0:
-                {
-                    // En Passant
-                    if (MoveTracker.ToBoardPos == posInArray + 1)
-                    {
-                        const int offset = 1;
-
-                        if (BoardManager.Board[posInArray + offset].pieceOnSquare == "Pawn" &&
-                            !BoardManager.Board[posInArray + offset].isPieceWhite)
-                        {
-                            if (MoveTracker.FromBoardPos == MoveTracker.ToBoardPos + 16)
-                            {
-                                if (!BoardManager.Board[posInArray + offset + 8].isOccupied)
-                                {
-                                    _pseudoLegalMoveList.Add(BoardManager.Board[posInArray + offset + 8]);
-                                    EnPassantMoveNum = _movesInList;
-                                    _movesInList++;
-                                    CanEnPassant = true;
-                                }
-                            }
-                        }
-                    }
-
-                    break;
-                }
-                case 7:
-                {
-                    // En Passant
-                    if (MoveTracker.ToBoardPos == posInArray - 1)
-                    {
-                        const int offset = -1;
-
-                        if (BoardManager.Board[posInArray + offset].pieceOnSquare == "Pawn" &&
-                            !BoardManager.Board[posInArray + offset].isPieceWhite)
-                        {
-                            if (MoveTracker.FromBoardPos == MoveTracker.ToBoardPos + 16)
-                            {
-                                if (!BoardManager.Board[posInArray + offset + 8].isOccupied)
-                                {
-                                    _pseudoLegalMoveList.Add(BoardManager.Board[posInArray + offset + 8]);
-                                    EnPassantMoveNum = _movesInList;
-                                    _movesInList++;
-                                    CanEnPassant = true;
-                                }
-                            }
-                        }
-                    }
-
-                    break;
-                }
+                HandleEnPassantCheck(posInArray, leftOffset, forwardOffset);
+                HandleEnPassantCheck(posInArray, rightOffset, forwardOffset);
+                break;
+            }
+            case 0:
+            {
+                // R for White -- L for Black
+                HandleEnPassantCheck(posInArray, isPieceWhite ? rightOffset : leftOffset, forwardOffset);
+                break;
+            }
+            case 7:
+            {
+                HandleEnPassantCheck(posInArray, isPieceWhite ? leftOffset : rightOffset, forwardOffset);
+                break;
             }
         }
         // End EnPassantCheck
+    }
+
+    private static void HandleEnPassantCheck(int posInArray, int directionalOffset, int upwardOffset)
+    {
+        // Checking if the last move was a pawn pushed to the left of our current pawn.
+        if (MoveTracker.ToBoardPos != posInArray + directionalOffset ||
+            BoardManager.Board[posInArray + directionalOffset].pieceOnSquare != "Pawn") return;
+        if (!WasTheLastMoveADoublePawnPush()) return;
+        
+        EnPassantMoveNum = posInArray + directionalOffset + upwardOffset;
+        if (BoardManager.Board[EnPassantMoveNum].isOccupied) return;
+
+        _pseudoLegalMoveList.Add(BoardManager.Board[EnPassantMoveNum]);
+
+        // Gathering and sending the results to the FEN Handler
+        var targetSquare = BoardManager.Board[EnPassantMoveNum];
+        var targetFile = char.ToString(targetSquare.file);
+        var targetRank = targetSquare.rank + 1;
+        FENHandler.EnPassantSquare = targetFile + targetRank;
     }
 
     public static bool IsPiecesTurn(bool isWhitePiece)
@@ -519,5 +424,14 @@ public class LegalMovesHandler : MonoBehaviour
             return false;
 
         return BoardManager.FindSquareFromBoardPos(position).isPieceWhite != isCurrentPieceWhite;
+    }
+
+    private static bool WasTheLastMoveADoublePawnPush()
+    {
+        var from = MoveTracker.FromBoardPos;
+        var to = MoveTracker.ToBoardPos;
+        var toSquare = BoardManager.Board[to];
+        if (toSquare.pieceOnSquare != "Pawn") return false;
+        return (toSquare.isPieceWhite && from == to - 16) || (!toSquare.isPieceWhite && from == to + 16);
     }
 }
