@@ -13,7 +13,7 @@ public class Square : MonoBehaviour
     [Header("Other Positional Info")]
     public int BoardPosInArray;
     public Vector2 pos;
-    public static readonly int[] offsets = { 8, -8, -1, 1, 9, -9, 7, -7 };
+    public static readonly int[] Offsets = { 8, -8, -1, 1, 9, -9, 7, -7 };
     public int[] numOfSquaresToEdge = {0, 0, 0, 0, 0, 0, 0, 0};
     
     [Header("Piece Info")]
@@ -35,7 +35,7 @@ public class Square : MonoBehaviour
 
     public Square(int boardPosInArray)
     {
-        BoardPosInArray = boardPosInArray;
+        this.BoardPosInArray = boardPosInArray;
     }
 
     private void Awake()
@@ -101,7 +101,11 @@ public class Square : MonoBehaviour
 
     private void OnMouseDown()
     {
+        // If there is currently no piece selected and the wrong color is picked
         if (!LegalMovesHandler.IsPiecesTurn(isPieceWhite) && BoardManager.SelectedSquare == null)
+            return;
+        //  Attempting to click an empty square with no piece to move
+        if (BoardManager.SelectedSquare == null && !isOccupied)
             return;
         
         BoardManager.SelectSquare(BoardPosInArray);

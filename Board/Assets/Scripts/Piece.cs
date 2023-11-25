@@ -38,7 +38,7 @@ public class Piece : MonoBehaviour
 
     private Sprite GetSpriteByName(string spriteName)
     {
-        for (int i = 0; i < pieceSprites.Length; i++)
+        for (var i = 0; i < pieceSprites.Length; i++)
         {
             if (pieceSprites[i].name == spriteName)
             {

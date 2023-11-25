@@ -27,18 +27,13 @@ public class BoardManager : MonoBehaviour
     {
         var square = Board[squarePosInBoard];
 
-        //  Attempting to click an empty square with no piece to move
-        if (SelectedSquare == null && !square.isOccupied)
-            return;
-
         // Attempting to move a selected piece to a legal square
         if (SelectedSquare != null && _legalMoves.Contains(square))
         {
             MovePiece(square, square.pieceOnSquare, square.isPieceWhite);
 
             // Clearing highlighted squares after the piece has moved
-            foreach (var sq in HighlightedPositions)
-                Board[sq].HighLightSquare(false);
+            ClearHighLightedSquares();
 
             Array.Clear(HighlightedPositions, 0, HighlightedPositions.Length);
             _amountOfHighlights = 0;
@@ -46,8 +41,18 @@ public class BoardManager : MonoBehaviour
             //Debug.Log(FENHandler.GetCurrentFenPos());
             return;
         }
-
+        // Attempting to move a selected piece to an illegal square
+        if (SelectedSquare != null && !_legalMoves.Contains(square))
+        {
+            SelectedSquare = null;
+            ClearHighLightedSquares();
+            return;
+        }
+ 
+        _legalMoves = LegalMovesHandler.FindPseudoLegalMoves(square.pieceOnSquare, square.isPieceWhite,
+            square.BoardPosInArray, square.file, square.rank, square.pos);
         HighLightAvailableSquares(square, squarePosInBoard);
+        SelectedSquare = square;
     }
 
     // Function to move pieces to new squares, will update FEN, Move order, internal and visual representation of the board
@@ -112,13 +117,9 @@ public class BoardManager : MonoBehaviour
             return;
         }
 
-        SelectedSquare = square;
         square.HighLightSquare(true);
         HighlightedPositions[_amountOfHighlights] = squarePosInBoard;
         _amountOfHighlights++;
-        // TODO: This is a horrible place to be handling move gen, MOVE TO SEPARATE FUNCTION
-        _legalMoves = LegalMovesHandler.FindPseudoLegalMoves(square.pieceOnSquare, square.isPieceWhite,
-            square.BoardPosInArray, square.file, square.rank, square.pos);
 
         if (_legalMoves.Length <= 0) return;
         foreach (var t in _legalMoves)
@@ -131,16 +132,23 @@ public class BoardManager : MonoBehaviour
         }
     }
 
+    private static void ClearHighLightedSquares()
+    {
+        // Clearing highlighted squares after the piece has moved
+        foreach (var sq in HighlightedPositions)
+            Board[sq].HighLightSquare(false);
+    }
+
     // Utility function to find the position of a square in BoardManager's Board array based off its rank and file positions
     public static int SquarePosInArrayFromVectorPos(Vector2 pos) // pos.x = file, pos.y = rank
     {
-        if (pos.x == 0 && pos.y == 0)
+        if (pos is { x: 0, y: 0 })
             return 0;
 
         var count = 0;
-        for (var file = 0; file < 8; file++)
+        for (var rank = 0; rank < 8; rank++)
         {
-            for (var rank = 0; rank < 8; rank++)
+            for (var file = 0; file < 8; file++)
             {
                 if (Math.Abs(pos.x - file) < 0.1f && Math.Abs(pos.y - rank) < 0.1f)
                 {

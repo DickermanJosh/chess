@@ -10,8 +10,8 @@ public class FENHandler : MonoBehaviour
     };
 
     private static string _fen = "";
-    // public const string StartFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-    public const string StartFen = "rnbqkbnr/8/8/8/8/8/8/RNBQKBNR w KQkq - 0 1";
+    public const string StartFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+    //public const string StartFen = "rnbqkbnr/8/8/8/8/8/8/RNBQKBNR w KQkq - 0 1";
 
     // Reads the Board[] in BoardManager and outputs the current FEN string based on the state of the board
     public static string GetCurrentFenPos()
@@ -101,12 +101,11 @@ public class FENHandler : MonoBehaviour
                 rank--;
                 file = 0;
             }
-            // Numerical value is used to move up in the file without adding any pieces to squares in between
+            // Numerical value is used to move up in files without adding any pieces to squares in between
             else if (char.IsDigit(token))
             {
                 file += (int)char.GetNumericValue(token);
             }
-
             // Deciphering the desired piece types from the chars
             else
             {
