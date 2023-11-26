@@ -16,8 +16,7 @@ public class LegalMovesHandler : MonoBehaviour
     public static bool WQueenSideCastle;
     public static bool BQueenSideCastle;
 
-    [Header("En-Passant Variables")]
-    public static int EnPassantMoveNum;
+    [Header("En-Passant Variables")] public static int EnPassantMoveNum;
 
     private void Awake()
     {
@@ -266,6 +265,12 @@ public class LegalMovesHandler : MonoBehaviour
             rightOffset = 9;
         }
 
+        if (rank == 7 || rank == 0)
+        {
+            Debug.Log("promote");
+            return;
+        }
+        // Single push forward
         if (!BoardManager.Board[posInArray + forwardOffset].isOccupied)
         {
             _pseudoLegalMoveList.Add(BoardManager.Board[posInArray + forwardOffset]);
@@ -282,63 +287,43 @@ public class LegalMovesHandler : MonoBehaviour
                 _movesInList++;
             }
         }
-
-        if (file != 0 && file != 7)
+        
+        // Capture Logic
+        switch (file)
         {
-            // Scenario for black b - g pawns to capture a white piece diagonally
-            if (BoardManager.Board[posInArray + leftOffset].isOccupied &&
-                IsOpponentPiece(posInArray + leftOffset,
-                    isPieceWhite)) //TODO Needs to check opposite color for both not just white
+            case > 0 and < 7:
             {
-                _pseudoLegalMoveList.Add(BoardManager.Board[posInArray + leftOffset]);
-                _movesInList++;
+                PawnCaptureCheck(posInArray, leftOffset, rank, file, isPieceWhite);
+                PawnCaptureCheck(posInArray, rightOffset, rank, file, isPieceWhite);
+                break;
             }
-
-            if (BoardManager.Board[posInArray + rightOffset].isOccupied &&
-                IsOpponentPiece(posInArray + rightOffset, isPieceWhite))
+            case 0:
             {
-                _pseudoLegalMoveList.Add(BoardManager.Board[posInArray + rightOffset]);
-                _movesInList++;
+                PawnCaptureCheck(posInArray, rightOffset, rank, file, isPieceWhite);
+                break;
             }
-
-            if ((isPieceWhite && rank == 4) || (!isPieceWhite && rank == 3))
-                EnPassantCheck(posInArray, file, isPieceWhite);
+            case 7:
+            {
+                PawnCaptureCheck(posInArray, leftOffset, rank, file, isPieceWhite);
+                break;
+            }
         }
-        else
-            switch (file)
-            {
-                case 0:
-                {
-                    if (BoardManager.Board[posInArray + leftOffset].isOccupied &&
-                        IsOpponentPiece(posInArray + leftOffset, isPieceWhite))
-                    {
-                        _pseudoLegalMoveList.Add(BoardManager.Board[posInArray + leftOffset]);
-                        _movesInList++;
-                    }
-
-                    if ((isPieceWhite && rank == 4) || (!isPieceWhite && rank == 3))
-                        EnPassantCheck(posInArray, file, isPieceWhite);
-
-                    break;
-                }
-                case 7:
-                {
-                    if (BoardManager.Board[posInArray + rightOffset].isOccupied &&
-                        IsOpponentPiece(posInArray + rightOffset, isPieceWhite))
-                    {
-                        _pseudoLegalMoveList.Add(BoardManager.Board[posInArray + rightOffset]);
-                        _movesInList++;
-                    }
-                    
-                    if ((isPieceWhite && rank == 4) || (!isPieceWhite && rank == 3))
-                        EnPassantCheck(posInArray, file, isPieceWhite);
-
-                    break;
-                }
-            }
         // End FindPseudoLegalPawnMoves
     }
-    
+
+    private static void PawnCaptureCheck(int posInArray, int directionalOffset, int rank, int file, bool isPieceWhite)
+    {
+        if (BoardManager.Board[posInArray + directionalOffset].isOccupied &&
+            IsOpponentPiece(posInArray + directionalOffset, isPieceWhite))
+        {
+            _pseudoLegalMoveList.Add(BoardManager.Board[posInArray + directionalOffset]);
+            _movesInList++;
+        }
+
+        if ((isPieceWhite && rank == 4) || (!isPieceWhite && rank == 3))
+            EnPassantCheck(posInArray, file, isPieceWhite);
+    }
+
     private static void EnPassantCheck(int posInArray, int file, bool isPieceWhite)
     {
         var forwardOffset = 0;
@@ -349,7 +334,6 @@ public class LegalMovesHandler : MonoBehaviour
             forwardOffset = -8;
             leftOffset = 1;
             rightOffset = -1;
-            
         }
         else
         {
@@ -387,7 +371,7 @@ public class LegalMovesHandler : MonoBehaviour
         if (MoveTracker.ToBoardPos != posInArray + directionalOffset ||
             BoardManager.Board[posInArray + directionalOffset].pieceOnSquare != "Pawn") return;
         if (!WasTheLastMoveADoublePawnPush()) return;
-        
+
         EnPassantMoveNum = posInArray + directionalOffset + upwardOffset;
         if (BoardManager.Board[EnPassantMoveNum].isOccupied) return;
 

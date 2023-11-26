@@ -1,7 +1,6 @@
 using System;
 using System.Linq;
 using UnityEngine;
-
 public class BoardManager : MonoBehaviour
 {
     private static BoardManager _instance;
@@ -14,12 +13,19 @@ public class BoardManager : MonoBehaviour
     
     public static Square SelectedSquare;
     private static int _amountOfHighlights = 0;
+    
+    private static string _to;
+    private static string _from;
+    private static int _oldPos;
+    private static int _newPos;
 
     private void Awake()
     {
         if (_instance == null)
             _instance = this;
         SelectedSquare = null;
+
+        //WhitePromotionImage = gameObject.GetComponent<Image>();
     }
 
     // Function to handle selecting a square in order to move a piece
@@ -89,20 +95,41 @@ public class BoardManager : MonoBehaviour
 
         var from = SelectedSquare.file + SelectedSquare.rank.ToString();
         var to = squareToMove.file + squareToMove.rank.ToString();
-        MoveTracker.Instance.Move(to, from, squareToMove.BoardPosInArray,
-            SelectedSquare.BoardPosInArray); // Updating the move order
 
-        // Checking if the new position resulting in a check on the opponent's king
-        //LegalMovesHandler.IsCheck(SelectedSquare.boardPosInArray, SelectedSquare.file, SelectedSquare.rank,
-        // SelectedSquare.pieceOnSquare, SelectedSquare.isPieceWhite);
-        LegalMovesHandler.FindPseudoLegalMoves(squareToMove.pieceOnSquare, squareToMove.isPieceWhite,
-            squareToMove.BoardPosInArray,
-            squareToMove.file, squareToMove.rank, squareToMove.pos);
+
+        // Promotion Handling
+        if (squareToMove.rank is 0 or 7 && pieceType == "Pawn")
+        {
+            PawnPromotionHandler.Instance.promotedSquare = squareToMove.BoardPosInArray;
+            PawnPromotionHandler.Instance.OnPromotionCompleted += HandlePromotionCompletion;
+            PawnPromotionHandler.Instance.TogglePromotionTable(isWhite);
+            
+            _to = to;
+            _from = from;
+            _oldPos = squareToMove.BoardPosInArray;
+            _newPos = SelectedSquare.BoardPosInArray;
+            
+        }
+        else
+        {
+            UpdateMoveOrder(to, from, squareToMove.BoardPosInArray,
+                SelectedSquare.BoardPosInArray);
+            //MoveTracker.Instance.Move(to, from, squareToMove.BoardPosInArray,
+            //    SelectedSquare.BoardPosInArray); // Updating the move order
+        }
 
         SelectedSquare = null;
         _legalMoves = null;
 
         FENHandler.GetCurrentFenPos();
+    }
+    
+    private static void HandlePromotionCompletion()
+    {
+        UpdateMoveOrder(_to, _from, _oldPos, _newPos);
+
+        // Unsubscribe to prevent memory leaks
+        PawnPromotionHandler.Instance.OnPromotionCompleted -= HandlePromotionCompletion;
     }
 
     // Called only in the SelectSquares function
@@ -138,6 +165,11 @@ public class BoardManager : MonoBehaviour
         // Clearing highlighted squares after the piece has moved
         foreach (var sq in HighlightedPositions)
             Board[sq].HighLightSquare(false);
+    }
+    
+    private static void UpdateMoveOrder(string to, string from, int newPosition, int oldPosition)
+    {
+        MoveTracker.Instance.Move(to, from, newPosition, oldPosition);
     }
 
     // Utility function to find the position of a square in BoardManager's Board array based off its rank and file positions

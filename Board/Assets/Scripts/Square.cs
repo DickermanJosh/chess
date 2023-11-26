@@ -97,7 +97,6 @@ public class Square : MonoBehaviour
         isOccupied = false;
         
         _rend.material = defaultMaterial;
-        
     }
 
     private void OnMouseDown()

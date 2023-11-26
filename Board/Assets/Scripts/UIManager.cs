@@ -3,11 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class UIManager : MonoBehaviour
 {
-    public Button flipBoardButton;
     public Camera viewCamera;
     public static bool isFlipped;
 
@@ -35,5 +33,7 @@ public class UIManager : MonoBehaviour
         viewCamera.transform.rotation = Quaternion.Euler(0, 0, roll);
         isFlipped = !isFlipped;
     }
+
+
 
 }
