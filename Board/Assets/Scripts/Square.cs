@@ -107,7 +107,10 @@ public class Square : MonoBehaviour
         //  Attempting to click an empty square with no piece to move
         if (BoardManager.SelectedSquare == null && !isOccupied)
             return;
-        
+        // Attempting to click on a piece while waiting to promote a pawn
+        if (PawnPromotionHandler.Instance.BlackPromotionTable.activeSelf ||
+            PawnPromotionHandler.Instance.WhitePromotionTable.activeSelf) 
+            return;
         BoardManager.SelectSquare(BoardPosInArray);
     }
 

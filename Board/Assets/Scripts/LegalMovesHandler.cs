@@ -143,7 +143,27 @@ public class LegalMovesHandler : MonoBehaviour
         }
         //return moves;
     }
+    private static void FindPseudoLegalKingMoves(int posInArray, int fileAsInt, int rank, bool isWhite)
+    {
+        var up = 8;
+        var right = 1;
+        var upRight = 9;
+        var upLeft = 7;
+        if (!isWhite)
+        {
+            up = -8;
+            right = -1;
+            upRight = -9;
+            upLeft = -7; 
+        }
 
+        for (var i = 0; i < 8; i++)
+        {
+            
+        }
+        
+        
+    }
     private static void FindPseudoLegalKnightMoves(int posInArray, int file, int rank, bool isWhite)
     {
         // Instead of calculating direct offsets I opt to send out "feelers" in each normal direction (Up-Down: +-8, Left-Right: +-1)
