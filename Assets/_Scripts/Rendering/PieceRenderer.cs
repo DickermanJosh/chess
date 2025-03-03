@@ -12,12 +12,13 @@ public class PieceRenderer : MonoBehaviour
     /// </summary>
     public void Init(Piece pieceData, Sprite pieceSprite, Vector2 position)
     {
-        Debug.Log("Piece Renderer: " + $"Piece_{pieceData.GetType()}_{pieceData.GetColor()}");
         this.pieceData = pieceData;
         spriteRenderer = GetComponent<SpriteRenderer>();
 
         // Assign the chosen sprite
         spriteRenderer.sprite = pieceSprite;
+
+        ChangeSpriteSize(0.1f);
 
         // Name for clarity in the hierarchy
         gameObject.name = $"Piece_{pieceData.ToString()}";
@@ -26,5 +27,21 @@ public class PieceRenderer : MonoBehaviour
 
         // Ensure the piece is drawn above the squares
         spriteRenderer.sortingOrder = 1;
+    }
+    
+    public void ChangePiece(Piece piece, Sprite pieceSprite)
+    {
+        this.pieceData = piece;
+
+        // Assign the chosen sprite
+        spriteRenderer.sprite = pieceSprite;
+
+        // Name for clarity in the hierarchy
+        gameObject.name = $"Piece_{pieceData.ToString()}";
+    }
+
+    public void ChangeSpriteSize(float percent)
+    {
+        spriteRenderer.size = new Vector2(percent, percent);
     }
 }

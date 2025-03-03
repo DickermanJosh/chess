@@ -8,6 +8,7 @@ namespace Core
     public class BoardManager : MonoBehaviour
     {
         private Board board;
+        [SerializeField] private BoardRenderer boardRenderer;
 
         // Singleton declaration
         private static BoardManager _instance;
@@ -22,18 +23,21 @@ namespace Core
 
             _instance = this;
 
-            board = new Board();
+            board = new Board(64);
             board.InitEmptyBoard(); // Initilize board in memory
-            BoardRenderer.Instance.RenderBoardSquares(board); // Render the empty board
+            boardRenderer.RenderBoardSquares(board); // Render the empty board
         }
 
         private void Start()
         {
-            Debug.Log($"Square 0 Piece: {board.squares[0].Piece.ToString()}");
+            // Create piece renderers to render individual pieces
+            // boardRenderer.CreatePieceRenderers(board); 
+
             board.squares[0].AddPieceToSquare(PieceType.Pawn, PieceColor.White);
 
-            Debug.Log($"Square 0 Piece: {board.squares[0].Piece.ToString()}");
-            BoardRenderer.Instance.RenderPiecesOnBoard(board);
+            boardRenderer.RenderPieceOnBoard(board.squares[0]);
+     
+            
         }
 
         // Read-only access to the board

@@ -4,13 +4,13 @@ namespace Core
      *  Internal representation of the chess board. Does NOT draw to screen
      *  Represents squares & pieces in play
      */
-    public class Board
+    public struct Board
     {
         public Square[] squares;
 
-        public Board()
+        public Board(int size)
         {
-            squares = new Square[64];
+            squares = new Square[size];
         }
 
         public void InitEmptyBoard()

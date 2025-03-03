@@ -5,7 +5,7 @@ namespace Core
         public int Index { get; }
         public Coord Coord { get; }
         public bool IsWhite { get; }
-        public Piece Piece { get; set; }
+        public Piece Piece;
 
         
         public Square(int index, Coord coord, bool isWhite)
@@ -13,7 +13,7 @@ namespace Core
             Index = index;
             Coord = coord;
             IsWhite = isWhite;
-            Piece = new Piece(PieceType.Rook, PieceColor.White); // White Rook for piece render testing
+            Piece = new Piece();
         }
 
         // Changes the square's already initialized piece object's type and color
