@@ -18,7 +18,7 @@ public class PieceRenderer : MonoBehaviour
         // Assign the chosen sprite
         spriteRenderer.sprite = pieceSprite;
 
-        ChangeSpriteSize(0.1f);
+        ChangeSpriteSize(0.75f);
 
         // Name for clarity in the hierarchy
         gameObject.name = $"Piece_{pieceData.ToString()}";
@@ -42,6 +42,7 @@ public class PieceRenderer : MonoBehaviour
 
     public void ChangeSpriteSize(float percent)
     {
-        spriteRenderer.size = new Vector2(percent, percent);
+        Vector2 newScale = new Vector2(percent, percent);
+        spriteRenderer.transform.localScale = newScale;
     }
 }
