@@ -1,7 +1,9 @@
 using Render;
+using Core;
 using UnityEngine;
-using UnityEngine.InputSystem;
-namespace Core
+using System.Collections.Generic;
+
+namespace Managers
 {
     /*
     *  Responsible for the execution of board logic internally and on screen
@@ -25,11 +27,13 @@ namespace Core
 
             board = new Board(64);
             board.Init();
+            BoardRenderer.Instance.RenderBoardSquares(board);
         }
 
         private void Start()
         {
-            board.LoadFEN(FENUtils.StartFen);
+            List<int> changedSquares = board.LoadFEN(FENUtils.StartFen);
+            BoardRenderer.Instance.RenderChangedSquares(changedSquares, board);
         }
 
         // Read-only access to the board

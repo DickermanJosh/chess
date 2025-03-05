@@ -72,6 +72,17 @@ namespace Render
         }
 
         /// <summary>
+        /// Updates the renderers for the indexes of the given list of squares.
+        /// </summary>
+        public void RenderChangedSquares(List<int> changedSquares, Board board)
+        {
+            foreach (int sqIndex in changedSquares)
+            {
+                BoardRenderer.Instance.RenderPieceOnBoard(board.squares[sqIndex]);
+            }
+        }
+
+        /// <summary>
         /// Renders a piece on the board using the square's already created PieceRenderer
         /// Achieves this by swapping out the sprite stored in the PieceRenderer
         /// </summary>

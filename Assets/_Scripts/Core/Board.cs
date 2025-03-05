@@ -29,8 +29,6 @@ namespace Core
                     squares[index] = new Square(index, coord, isWhite);
                 }
             }
-
-            BoardRenderer.Instance.RenderBoardSquares(this);
         }
 
         /// <summary>
@@ -39,20 +37,13 @@ namespace Core
         /// 
         /// Example FEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         /// </summary>
-        public void LoadFEN(string fen)
+        public List<int> LoadFEN(string fen)
         {
             // For now, just parse up to the first space (piece placement only).
             string[] parts = fen.Split(' ');
             string piecePlacement = parts[0];
 
-            List<int> changedSquares = FENUtils.ParsePiecePlacementSegment(piecePlacement, this);
-
-            foreach (int sqIndex in changedSquares)
-            {
-                // Re-render only that square's piece
-                BoardRenderer.Instance.RenderPieceOnBoard(squares[sqIndex]);
-            }
-
+            return FENUtils.ParsePiecePlacementSegment(piecePlacement, this);
         }
 
         public void UpdateDisplay()
