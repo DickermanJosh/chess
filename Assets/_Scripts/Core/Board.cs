@@ -1,3 +1,6 @@
+using Render;
+using System.Collections.Generic;
+
 namespace Core
 {
     /*
@@ -13,7 +16,7 @@ namespace Core
             squares = new Square[size];
         }
 
-        public void InitEmptyBoard()
+        public void Init()
         {
             for (int i = 0; i < 8; i++) // rank
             {
@@ -26,16 +29,35 @@ namespace Core
                     squares[index] = new Square(index, coord, isWhite);
                 }
             }
+
+            BoardRenderer.Instance.RenderBoardSquares(this);
         }
 
-        public void PopulateBoardFromFEN(string fen)
+        /// <summary>
+        /// Parse the FEN string and update only changed squares.
+        /// Board is updated both in memory and on screen.
+        /// 
+        /// Example FEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        /// </summary>
+        public void LoadFEN(string fen)
         {
-            return;
+            // For now, just parse up to the first space (piece placement only).
+            string[] parts = fen.Split(' ');
+            string piecePlacement = parts[0];
+
+            List<int> changedSquares = FENUtils.ParsePiecePlacementSegment(piecePlacement, this);
+
+            foreach (int sqIndex in changedSquares)
+            {
+                // Re-render only that square's piece
+                BoardRenderer.Instance.RenderPieceOnBoard(squares[sqIndex]);
+            }
+
         }
 
-        public void ClearBoard()
+        public void UpdateDisplay()
         {
-
+            
         }
     }
 }

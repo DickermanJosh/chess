@@ -1,5 +1,6 @@
 using Render;
 using UnityEngine;
+using UnityEngine.InputSystem;
 namespace Core
 {
     /*
@@ -8,7 +9,6 @@ namespace Core
     public class BoardManager : MonoBehaviour
     {
         private Board board;
-        [SerializeField] private BoardRenderer boardRenderer;
 
         // Singleton declaration
         private static BoardManager _instance;
@@ -24,20 +24,12 @@ namespace Core
             _instance = this;
 
             board = new Board(64);
-            board.InitEmptyBoard(); // Initilize board in memory
-            boardRenderer.RenderBoardSquares(board); // Render the empty board
+            board.Init();
         }
 
         private void Start()
         {
-            // Create piece renderers to render individual pieces
-            // boardRenderer.CreatePieceRenderers(board); 
-
-            board.squares[0].AddPieceToSquare(PieceType.Pawn, PieceColor.White);
-
-            boardRenderer.RenderPieceOnBoard(board.squares[0]);
-     
-            
+            board.LoadFEN(FENUtils.StartFen);
         }
 
         // Read-only access to the board

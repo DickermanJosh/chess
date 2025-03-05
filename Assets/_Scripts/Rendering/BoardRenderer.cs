@@ -40,6 +40,19 @@ namespace Render
         // renderers on the same square
         private Dictionary<int, PieceRenderer> pieceRenderers = new();
 
+        private static BoardRenderer _instance;
+        public static BoardRenderer Instance => _instance;
+
+        private void Awake()
+        {
+            if (_instance is not null)
+            {
+                Destroy(_instance);
+            }
+
+            _instance = this;
+        }
+
         /// <summary>
         /// Spawns SquareRenderer objects as children and assigns the correct sprite/color/position.
         /// Also creates PieceRenderer objects to render potential pieces on the squares
@@ -132,8 +145,7 @@ namespace Render
 
         /// <summary>
         /// Return the correct sprite for the given piece.
-        /// For brevity, we do a simple switch. 
-        /// In practice, you might prefer a Dictionary<(PieceType, PieceColor), Sprite> or something more robust.
+        /// TODO: Change to utilize Dictionary<(PieceType, PieceColor), Sprite> instead of switch
         /// </summary>
         private Sprite GetPieceSprite(Piece piece)
         {

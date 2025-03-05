@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Core
@@ -6,6 +7,18 @@ namespace Core
     {
         public readonly int file;
         public readonly int rank;
+
+        private static readonly Dictionary<int, char> FileToCharMap = new Dictionary<int, char>
+        {
+            { 0, 'a' },
+            { 1, 'b' },
+            { 2, 'c' },
+            { 3, 'd' },
+            { 4, 'e' },
+            { 5, 'f' },
+            { 6, 'g' },
+            { 7, 'h' }
+        };
 
         public Coord(int file, int rank)
         {
@@ -30,19 +43,13 @@ namespace Core
 
         private readonly char GetFileAsChar(int file)
         {
-            switch (file)
+            if (FileToCharMap.TryGetValue(file, out var ch))
             {
-                case 0: return 'A';
-                case 1: return 'B';
-                case 2: return 'C';
-                case 3: return 'D';
-                case 4: return 'E';
-                case 5: return 'F';
-                case 6: return 'G';
-                case 7: return 'H';
+                return ch;
             }
-
-            return 'Z'; // return invalid file if not found
+            
+            Debug.LogError("Invalid file index in Coord struct.");
+            return 'z';
         }
     }
 }
