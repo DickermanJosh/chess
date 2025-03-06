@@ -1,10 +1,11 @@
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.SceneManagement;
+using TMPro;
 
 public class MainMenuManager : MonoBehaviour
 {
-    [Header("Buttons in Scene")]
+    [Header("Menu Buttons")]
     [SerializeField] private Button onlineGameButton;
     [SerializeField] private Button aiGameButton;
     [SerializeField] private Button localGameButton;
@@ -14,6 +15,11 @@ public class MainMenuManager : MonoBehaviour
     [SerializeField] private string ipAddress = "127.0.0.1";
     [SerializeField] private int port = 24355;
 
+    [Header("Player Prefs")]
+    [SerializeField] private TextMeshProUGUI helloText;
+    [SerializeField] private InputField nameInput;
+    [SerializeField] private Button submitButton;
+
     private TCPClient client;
 
     private void Awake()
@@ -22,6 +28,12 @@ public class MainMenuManager : MonoBehaviour
         aiGameButton.onClick.AddListener(OnAIGameClicked);
         localGameButton.onClick.AddListener(OnLocalGameClicked);
         quitButton.onClick.AddListener(OnQuitClicked);
+        submitButton.onClick.AddListener(OnSubmitClicked);
+
+        // Set PlayerPrefs at main menu entrance, if we made it here we are a player
+        PlayerIdentity.InitializeIdentity();
+
+        helloText.text = $"Hello, {PlayerIdentity.PlayerName}";
     }
 
     private void OnConnectClicked()
@@ -31,7 +43,7 @@ public class MainMenuManager : MonoBehaviour
         client.Connect(ipAddress, port);
 
         // TODO: Send this to a 'lobby' page that allows users to make / join rooms
-        SceneLoader.Instance.LoadScene(SceneLoader.OnlineGame);
+        SceneLoader.Instance.LoadScene(SceneLoader.Lobby);
     }
 
     private void OnAIGameClicked()
@@ -48,5 +60,16 @@ public class MainMenuManager : MonoBehaviour
     private void OnQuitClicked()
     {
         Application.Quit();
+    }
+
+    private void OnSubmitClicked()
+    {
+        if (nameInput.text.Length < 1)
+        {
+            return;
+        }
+
+        PlayerIdentity.SetPlayerName(nameInput.text);
+        helloText.text = $"Hello, {PlayerIdentity.PlayerName}";
     }
 }

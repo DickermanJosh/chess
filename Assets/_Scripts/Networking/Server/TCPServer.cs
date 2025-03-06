@@ -67,6 +67,7 @@ public class TCPServer
             TcpClient client = listener.EndAcceptTcpClient(ar);
             clients.Add(client);
             Debug.Log("[Server] New client connected.");
+            Debug.Log($"[Server] <Serving ({clients.Count}) active connections>");
 
             // Begin reading from this client
             StartReadingClient(client);
@@ -138,6 +139,8 @@ public class TCPServer
         Debug.Log("[Server] Removing client...");
         clients.Remove(client);
         client.Close();
+        Debug.Log("[Server] Removed client.");
+        Debug.Log($"[Server] <Serving ({clients.Count}) active connections>");
     }
 
     // Helper class to track reading state
