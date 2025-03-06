@@ -1,5 +1,9 @@
 using UnityEngine;
 
+/// <summary>
+/// Responsible for assigning a persistent, unique ID key to clients
+//  Also assigns a player name that can be changed at will.
+/// </summary>
 public static class PlayerIdentity
 {
     private const string PlayerIdKey = "player_id";
@@ -8,6 +12,10 @@ public static class PlayerIdentity
     public static string PlayerId { get; private set; }
     public static string PlayerName { get; private set; }
 
+    /// <summary>
+    /// Fetches the player's info if it exists, creates it if it does not
+    /// Called at MainMenuManager's Awake()
+    /// </summary>
     public static void InitializeIdentity()
     {
         // 1) Check if we already have an ID in PlayerPrefs
