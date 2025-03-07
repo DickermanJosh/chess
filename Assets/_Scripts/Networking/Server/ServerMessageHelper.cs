@@ -3,7 +3,14 @@ using UnityEngine;
 public static class ServerMessageHelper
 {
     #region Check Received Messages
-    public static void CheckConnectionReceived(RemotePlayerConnection conn, string message)
+
+    public static void HandleReceivedMessage(RemotePlayerConnection conn, string message)
+    {
+        CheckConnectionReceived(conn, message);
+        CheckQueueReceived(conn, message);
+        CheckMoveReceived(conn, message);
+    }
+    private static void CheckConnectionReceived(RemotePlayerConnection conn, string message)
     {
         if (message.StartsWith("CONNECT_ID|"))
         {
@@ -26,7 +33,7 @@ public static class ServerMessageHelper
             conn.Send("WELCOME");
         }
     }
-    public static void CheckQueueReceived(RemotePlayerConnection conn, string message)
+    private static void CheckQueueReceived(RemotePlayerConnection conn, string message)
     {
         if (message.StartsWith("QUEUEUP|"))
         {
@@ -48,7 +55,7 @@ public static class ServerMessageHelper
         }
     }
 
-    public static void CheckMoveReceived(RemotePlayerConnection conn, string message) 
+    private static void CheckMoveReceived(RemotePlayerConnection conn, string message) 
     {
         if (message.StartsWith("MOVE|"))
         {

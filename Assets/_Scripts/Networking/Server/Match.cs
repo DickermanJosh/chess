@@ -3,7 +3,6 @@ public class Match
     public RemotePlayerConnection WhitePlayer { get; private set; }
     public RemotePlayerConnection BlackPlayer { get; private set; }
 
-    // or "Board" if that's your structure
     private GameState gameState;
 
     public Match(RemotePlayerConnection p1, RemotePlayerConnection p2)

@@ -10,7 +10,7 @@ public static class MatchmakingManager
     {
         if (player.IsInMatch)
         {
-            Debug.Log($"[Server] {player.PlayerName} is already in a match, ignoring queue request.");
+            ServerMessageHelper.Log($"{player.PlayerName} is already in a match, ignoring queue request.");
             return;
         }
 
@@ -40,6 +40,6 @@ public static class MatchmakingManager
         var match = new Match(p1, p2);
         activeMatches.Add(match);
 
-        Debug.Log($"[Server] Match created for {p1.PlayerName} and {p2.PlayerName}.");
+        ServerMessageHelper.Log($"Match created for {p1.PlayerName} and {p2.PlayerName}.");
     }
 }

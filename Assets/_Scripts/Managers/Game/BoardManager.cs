@@ -5,9 +5,9 @@ using System.Collections.Generic;
 
 namespace Managers
 {
-    /*
-    *  Responsible for the execution of board logic internally and on screen
-    */
+    /// <summary>
+    /// Responsible for the execution of the clients board logic internally and on screen
+    /// </summary>
     public class BoardManager : MonoBehaviour
     {
         private Board board;

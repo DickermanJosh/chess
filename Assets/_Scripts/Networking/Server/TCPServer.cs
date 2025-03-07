@@ -6,8 +6,8 @@ using System.Text;
 using UnityEngine;
 
 /// <summary>
-/// Minimal TCP server. Listens on a specified port, accepts clients,
-/// receives messages, and broadcasts them to all connected clients.
+/// Minimal TCP server. Listens on a specified port (24355), accepts clients,
+/// receives messages including CONNECT_ID, QUEUEUP, MOVE and sends appropriate responses to client
 /// </summary>
 public class TCPServer
 {
@@ -114,9 +114,7 @@ public class TCPServer
             string message = Encoding.UTF8.GetString(state.buffer, 0, bytesRead);
             ServerMessageHelper.Log($"Received from {conn.PlayerId}|{conn.PlayerName}: {message}");
 
-            // BROADCAST or handle logic here
-            // BroadcastMessage(message);
-            HandleMessage(conn, message);
+            ServerMessageHelper.HandleReceivedMessage(conn, message);
 
             // Continue reading from this client
             conn.Stream.BeginRead(state.buffer, 0, state.buffer.Length, OnDataReceived, state);
@@ -127,12 +125,6 @@ public class TCPServer
                 $"\n Exception: {ex.Message}");
             RemoveClient(conn);
         }
-    }
-
-    private void HandleMessage(RemotePlayerConnection conn, string message)
-    {
-        ServerMessageHelper.CheckConnectionReceived(conn, message);
-        ServerMessageHelper.CheckQueueReceived(conn, message);
     }
 
 
@@ -161,8 +153,10 @@ public class TCPServer
         ServerMessageHelper.Log($"<Serving ({connections.Count}) active connections>");
     }
 
-    // Helper class to track reading state
-    // Updated to store a RemotePlayerConnection instead of just a TcpClient
+    /// <summary>
+    /// Helper class to track reading state
+    /// Updated to store a RemotePlayerConnection instead of just a TcpClient
+    /// </summary>
     private class ClientState
     {
         public RemotePlayerConnection connection;

@@ -12,7 +12,7 @@ public class LobbyManager : MonoBehaviour
 
     public void OnClickQueueUp()
     {
-        string message = ClientMessages.GetQueueUp();
+        string message = ClientMessageHelper.GetQueueUp();
         PlayerIdentity.Client.SendMessage(message);
     }
 }
