@@ -11,10 +11,11 @@ public static class PlayerIdentity
 
     public static string PlayerId { get; private set; }
     public static string PlayerName { get; private set; }
+    public static TCPClient Client { get; private set; }
 
     /// <summary>
     /// Fetches the player's info if it exists, creates it if it does not
-    /// Called at MainMenuManager's Awake()
+    /// Called at BootManager when the process is determined to be a client
     /// </summary>
     public static void InitializeIdentity()
     {
@@ -49,5 +50,10 @@ public static class PlayerIdentity
         PlayerName = newName;
         PlayerPrefs.SetString(PlayerNameKey, newName);
         PlayerPrefs.Save();
+    }
+
+    public static void SetTcpClient(TCPClient client)
+    {
+        Client = client;
     }
 }

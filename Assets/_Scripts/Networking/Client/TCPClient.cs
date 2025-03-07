@@ -43,6 +43,12 @@ public class TCPClient
 
             // Begin reading from server
             stream.BeginRead(buffer, 0, buffer.Length, OnDataReceived, null);
+
+            // Sending ID's from the client like this is not secure, but for a small-scale
+            // application like this one that doesn't yet have a server-side db - it works.
+            // ------------------ Send ID + name handshake -----------------------
+            SendMessage($"CONNECT_ID|{PlayerIdentity.PlayerId}|{PlayerIdentity.PlayerName}");
+            // -------------------------------------------------------------------
         }
         catch (Exception ex)
         {

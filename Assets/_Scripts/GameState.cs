@@ -7,4 +7,9 @@ public struct GameState
     public string FEN { get; set; }
     public bool IsWhiteToMove { get; set; }
     public bool IsGameOver { get; set; }
+
+    public void Init()
+    {
+        // TODO:
+    }
 }

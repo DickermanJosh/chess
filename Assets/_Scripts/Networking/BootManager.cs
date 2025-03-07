@@ -16,6 +16,8 @@ public class BootManager : MonoBehaviour
         {
             // We are not headless => load the client main menu
             Debug.Log("[BootManager] Detected non-headless. Loading Main Menu scene...");
+       
+            PlayerIdentity.InitializeIdentity();
             SceneManager.LoadScene("MainMenu");
         }
     }

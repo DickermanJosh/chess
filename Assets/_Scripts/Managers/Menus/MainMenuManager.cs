@@ -30,19 +30,17 @@ public class MainMenuManager : MonoBehaviour
         quitButton.onClick.AddListener(OnQuitClicked);
         submitButton.onClick.AddListener(OnSubmitClicked);
 
-        // Set PlayerPrefs at main menu entrance, if we made it here we are a player
-        PlayerIdentity.InitializeIdentity();
-
         helloText.text = $"Hello, {PlayerIdentity.PlayerName}";
     }
 
     private void OnConnectClicked()
     {
         Debug.Log("[MainMenu] Connecting to " + ipAddress + ":" + port);
+
         client = new TCPClient();
         client.Connect(ipAddress, port);
+        PlayerIdentity.SetTcpClient(client);
 
-        // TODO: Send this to a 'lobby' page that allows users to make / join rooms
         SceneLoader.Instance.LoadScene(SceneLoader.Lobby);
     }
 

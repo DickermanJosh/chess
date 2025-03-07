@@ -12,7 +12,7 @@ using UnityEngine;
 public class TCPServer
 {
     private TcpListener listener;
-    private List<TcpClient> clients = new List<TcpClient>();
+    private List<RemotePlayerConnection> connections = new List<RemotePlayerConnection>();
     private bool isRunning = false;
 
     private int port;
@@ -30,13 +30,13 @@ public class TCPServer
             listener.Start();
             isRunning = true;
 
-            Debug.Log($"[Server] Started on port {port}.");
+            ServerMessageHelper.Log($"Started on port {port}.");
             // Begin accepting clients asynchronously
             listener.BeginAcceptTcpClient(OnClientConnected, null);
         }
         catch (Exception ex)
         {
-            Debug.LogError("[Server] Could not start: " + ex.Message);
+            ServerMessageHelper.LogError("Could not start: " + ex.Message);
         }
     }
 
@@ -46,15 +46,15 @@ public class TCPServer
         try
         {
             listener?.Stop();
-            foreach (var c in clients)
+            foreach (var c in connections)
             {
-                c.Close();
+                c.TcpClient.Close();
             }
-            clients.Clear();
+            connections.Clear();
         }
         catch (Exception ex)
         {
-            Debug.LogError("[Server] Error stopping server: " + ex.Message);
+            ServerMessageHelper.LogError("Error stopping server: " + ex.Message);
         }
     }
 
@@ -65,26 +65,33 @@ public class TCPServer
         try
         {
             TcpClient client = listener.EndAcceptTcpClient(ar);
-            clients.Add(client);
-            Debug.Log("[Server] New client connected.");
-            Debug.Log($"[Server] <Serving ({clients.Count}) active connections>");
+            // clients.Add(client);
+
+            // Create a new RemotePlayerConnection with a placeholder ID and name until
+            // the CONNECT_ID message is received
+            string dummyId = Guid.NewGuid().ToString();
+            var conn = new RemotePlayerConnection(client, dummyId, "Unnamed");
+            connections.Add(conn);
+
+            ServerMessageHelper.Log("New client connected... Fetching ID and name.");
+            ServerMessageHelper.Log($"<Serving ({connections.Count}) active connections>");
 
             // Begin reading from this client
-            StartReadingClient(client);
+            StartReadingClient(conn);
 
             // Keep accepting new clients
             listener.BeginAcceptTcpClient(OnClientConnected, null);
         }
         catch (Exception ex)
         {
-            Debug.LogError("[Server] Error accepting client: " + ex.Message);
+            ServerMessageHelper.LogError($"Error accepting client: {ex.Message}");
         }
     }
 
-    private void StartReadingClient(TcpClient client)
+    private void StartReadingClient(RemotePlayerConnection conn)
     {
-        var state = new ClientState(client);
-        client.GetStream().BeginRead(state.buffer, 0, state.buffer.Length, OnDataReceived, state);
+        var state = new ClientState(conn);
+        conn.Stream.BeginRead(state.buffer, 0, state.buffer.Length, OnDataReceived, state);
     }
 
     private void OnDataReceived(IAsyncResult ar)
@@ -92,66 +99,78 @@ public class TCPServer
         if (!isRunning) return;
 
         ClientState state = (ClientState)ar.AsyncState;
+        RemotePlayerConnection conn = state.connection;
+
         try
         {
-            int bytesRead = state.client.GetStream().EndRead(ar);
+            int bytesRead = conn.Stream.EndRead(ar);
             if (bytesRead <= 0)
             {
                 // Client disconnected
-                RemoveClient(state.client);
+                RemoveClient(conn);
                 return;
             }
 
             string message = Encoding.UTF8.GetString(state.buffer, 0, bytesRead);
-            Debug.Log($"[Server] Received: {message}");
+            ServerMessageHelper.Log($"Received from {conn.PlayerId}|{conn.PlayerName}: {message}");
 
             // BROADCAST or handle logic here
-            BroadcastMessage(message);
+            // BroadcastMessage(message);
+            HandleMessage(conn, message);
 
             // Continue reading from this client
-            state.client.GetStream().BeginRead(state.buffer, 0, state.buffer.Length, OnDataReceived, state);
+            conn.Stream.BeginRead(state.buffer, 0, state.buffer.Length, OnDataReceived, state);
         }
         catch (Exception ex)
         {
-            Debug.LogError("[Server] Error reading data: " + ex.Message);
-            RemoveClient(state.client);
+            ServerMessageHelper.LogError($"Error reading data from {conn.PlayerId}:{conn.PlayerName} " +
+                $"\n Exception: {ex.Message}");
+            RemoveClient(conn);
         }
     }
+
+    private void HandleMessage(RemotePlayerConnection conn, string message)
+    {
+        ServerMessageHelper.CheckConnectionReceived(conn, message);
+        ServerMessageHelper.CheckQueueReceived(conn, message);
+    }
+
 
     private void BroadcastMessage(string msg)
     {
         byte[] data = Encoding.UTF8.GetBytes(msg);
-        foreach (var c in clients)
+        foreach (var c in connections)
         {
             try
             {
-                c.GetStream().Write(data, 0, data.Length);
+                c.Stream.Write(data, 0, data.Length);
             }
             catch (Exception ex)
             {
-                Debug.LogError("[Server] Error broadcasting: " + ex.Message);
+                ServerMessageHelper.LogError("Error broadcasting: " + ex.Message);
             }
         }
     }
 
-    private void RemoveClient(TcpClient client)
+    private void RemoveClient(RemotePlayerConnection conn)
     {
-        Debug.Log("[Server] Removing client...");
-        clients.Remove(client);
-        client.Close();
-        Debug.Log("[Server] Removed client.");
-        Debug.Log($"[Server] <Serving ({clients.Count}) active connections>");
+        ServerMessageHelper.Log($"Removing client {conn.PlayerName} with ID {conn.PlayerId}...");
+        connections.Remove(conn);
+        conn.TcpClient.Close();
+        ServerMessageHelper.Log("Removed client.");
+        ServerMessageHelper.Log($"<Serving ({connections.Count}) active connections>");
     }
 
     // Helper class to track reading state
+    // Updated to store a RemotePlayerConnection instead of just a TcpClient
     private class ClientState
     {
-        public TcpClient client;
+        public RemotePlayerConnection connection;
         public byte[] buffer;
 
-        public ClientState(TcpClient c)
+        public ClientState(RemotePlayerConnection c)
         {
-            client = c;
+            connection = c;
             buffer = new byte[1024];
         }
     }
