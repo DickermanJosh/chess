@@ -10,9 +10,6 @@ namespace Managers
     /// </summary>
     public class BoardManager : MonoBehaviour
     {
-        private Board board;
-
-        // Singleton declaration
         private static BoardManager _instance;
         public static BoardManager Instance => _instance;
 
@@ -25,21 +22,24 @@ namespace Managers
 
             _instance = this;
 
-            board = new Board(64);
-            board.Init();
-            BoardRenderer.Instance.RenderBoardSquares(board);
+            BoardRenderer.Instance.RenderBoardSquares(GameManager.Instance.GameState.Board);
         }
 
         private void Start()
         {
-            List<int> changedSquares = board.LoadFEN(FENUtils.StartFen);
-            BoardRenderer.Instance.RenderChangedSquares(changedSquares, board);
+            if (GameManager.Instance.MyColor == PieceColor.Black)
+            {
+                BoardRenderer.Instance.FlipPerspective(GameManager.Instance.GameState.Board);
+            } 
+            // List<int> changedSquares = localBoard.LoadFEN(FENUtils.StartFen);
+            // List<int> changedSquares = localBoard.LoadFEN(FENUtils.StartFen);
+            // BoardRenderer.Instance.RenderChangedSquares(changedSquares, localBoard);
         }
 
-        // Read-only access to the board
-        public Board GetBoard()
+        public void UpdateLocalBoard(string fen)
         {
-            return board;
+            List<int> changedSquares = GameManager.Instance.GameState.Board.LoadFEN(fen);
+            BoardRenderer.Instance.RenderChangedSquares(changedSquares, GameManager.Instance.GameState.Board);
         }
     }
 

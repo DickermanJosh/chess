@@ -1,3 +1,4 @@
+using Core;
 using UnityEngine;
 
 /// <summary>
@@ -40,11 +41,35 @@ public static class ClientMessageHelper
     {
         if (message.StartsWith("MATCH_START|"))
         {
+            Log($"Match start hit: raw string: {message}");
             string[] m = message.Split('|');
-            string color = m[1];
-            string oponent = m[2];
+            string colorStr = m[1];
+            string opponent = m[2];
+            PieceColor color = PieceColor.None;
 
+            if (colorStr.Equals("WHITE"))
+            {
+                color = PieceColor.White;
+            }
+            else
+            {
+                color = PieceColor.Black;
+            }
 
+            if (color == PieceColor.None)
+            {
+                Debug.Log($"[Client] Could not interpret piece color assigned by server. Received: {colorStr}");
+                return;
+            }
+
+            // Start online match with local player and network player
+            UnityMainThreadDispatcher.Enqueue(() =>
+            {
+                GameManager.Instance.OpponentName = opponent;
+                GameManager.Instance.StartOnlineGame(color);
+
+                SceneLoader.Instance.LoadScene(SceneLoader.OnlineGame);
+            });
         }
     }
 

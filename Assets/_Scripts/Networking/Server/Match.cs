@@ -7,17 +7,15 @@ public class Match
 
     public Match(RemotePlayerConnection p1, RemotePlayerConnection p2)
     {
-        // For example, let p1 be White, p2 be Black:
         WhitePlayer = p1;
         BlackPlayer = p2;
 
-        // Initialize your game logic
+        // Init server-side gamestate
         gameState = new GameState();
-        gameState.Init();
 
-        // Notify each player
-        WhitePlayer.Send($"MATCH_START|WHITE|{BlackPlayer.PlayerName}");
-        BlackPlayer.Send($"MATCH_START|BLACK|{WhitePlayer.PlayerName}");
+        // Notify each player, clients will handle setting up a new client-side gamestate
+        WhitePlayer.Send(ServerMessageHelper.GetMatchStart(BlackPlayer, Core.PieceColor.White));
+        BlackPlayer.Send(ServerMessageHelper.GetMatchStart(WhitePlayer, Core.PieceColor.Black));
     }
 
     public void OnPlayerMove(RemotePlayerConnection player, string moveData)

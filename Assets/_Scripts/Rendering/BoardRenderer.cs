@@ -128,10 +128,8 @@ namespace Render
 
             PieceRenderer pieceRenderer = pieceObj.AddComponent<PieceRenderer>();
 
-            // Pick the correct sprite for the piece
             Sprite pieceSprite = GetPieceSprite(square.Piece);
 
-            // The position is typically the same as the square's center
             float xPos = square.Coord.file * squareSize - 3.5f;
             float yPos = square.Coord.rank * squareSize - 3.5f;
 
@@ -152,6 +150,22 @@ namespace Render
             }
 
             return null;
+        }
+
+        public void FlipPerspective(Board board)
+        {
+            Flip180();
+            foreach (Square square in board.squares)
+            {
+                PieceRenderer renderer = GetRendererFromIndex(square.Index);
+
+                renderer.Flip180();
+            }
+        }
+
+        private void Flip180()
+        {
+            gameObject.transform.rotation = Quaternion.Euler(0f, 0f, 180f);
         }
 
         /// <summary>

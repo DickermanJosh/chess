@@ -14,29 +14,20 @@ public class PieceRenderer : MonoBehaviour
     {
         this.pieceData = pieceData;
         spriteRenderer = GetComponent<SpriteRenderer>();
-
-        // Assign the chosen sprite
         spriteRenderer.sprite = pieceSprite;
 
         ChangeSpriteSize(0.75f);
 
-        // Name for clarity in the hierarchy
         gameObject.name = $"Piece_{pieceData.ToString()}";
-
         transform.position = new Vector3(position.x, position.y, 0);
-
-        // Ensure the piece is drawn above the squares
         spriteRenderer.sortingOrder = 1;
     }
     
     public void ChangePiece(Piece piece, Sprite pieceSprite)
     {
         this.pieceData = piece;
-
-        // Assign the chosen sprite
         spriteRenderer.sprite = pieceSprite;
 
-        // Name for clarity in the hierarchy
         gameObject.name = $"Piece_{pieceData.ToString()}";
     }
 
@@ -44,5 +35,10 @@ public class PieceRenderer : MonoBehaviour
     {
         Vector2 newScale = new Vector2(percent, percent);
         spriteRenderer.transform.localScale = newScale;
+    }
+
+    public void Flip180()
+    {
+        spriteRenderer.transform.localRotation = Quaternion.Euler(0f, 0f, 180f);
     }
 }

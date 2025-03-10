@@ -19,8 +19,6 @@ public class SquareRenderer : MonoBehaviour
         spriteRenderer.sprite = defaultSquareSprite;
         spriteRenderer.color = squareColor;
 
-        // Square Object naming for clarity in the hierarchy
-        // gameObject.name = $"Square_{squareData.Coord.file}_{squareData.Coord.rank}";
         gameObject.name = $"Square_{squareData.Coord.ToString()}-{squareData.Coord.ToVector2().x},{squareData.Coord.ToVector2().y}";
 
         // Position this square in the world

@@ -40,6 +40,6 @@ public static class MatchmakingManager
         var match = new Match(p1, p2);
         activeMatches.Add(match);
 
-        ServerMessageHelper.Log($"Match created for {p1.PlayerName} and {p2.PlayerName}.");
+        ServerMessageHelper.Log($"Match created for {p1.PlayerName}|WHITE and {p2.PlayerName}|BLACK.");
     }
 }

@@ -1,3 +1,4 @@
+using Core;
 using UnityEngine;
 
 public static class ServerMessageHelper
@@ -67,7 +68,27 @@ public static class ServerMessageHelper
     #endregion
 
     #region Messages To Send
+    /// <summary>
+    /// Returns the MATCH_START message that gets sent by the server to clients
+    /// </summary>
+    /// <param name="conn">The opposing client, so their name can be sent to the client receiving the MATCH_START</param>
+    /// <param name="color">The color of the client </param>
+    /// <returns></returns>
+    public static string GetMatchStart(RemotePlayerConnection conn, PieceColor color)
+    {
+        if (color == PieceColor.None) return null;
 
+        string msg = "MATCH_START|";
+        if (color == PieceColor.White)
+        {
+            msg += $"WHITE|{conn.PlayerName}";
+            return msg;
+        }
+
+        msg += $"BLACK|{conn.PlayerName}";
+        return msg;
+
+    }
     #endregion
 
     #region Console Logging

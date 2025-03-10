@@ -88,6 +88,7 @@ public class TCPClient
             string msg = Encoding.UTF8.GetString(buffer, 0, bytesRead);
             Debug.Log($"[Client] Received: {msg}");
             OnMessageReceived?.Invoke(msg);
+            ClientMessageHelper.HandleReceivedMessage(msg);
 
             // Keep reading
             stream.BeginRead(buffer, 0, buffer.Length, OnDataReceived, null);

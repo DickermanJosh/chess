@@ -25,6 +25,7 @@ public class SceneLoader : MonoBehaviour
         }
         
         _instance = this;
+        DontDestroyOnLoad(_instance);
     }
 
     public void LoadScene(string sceneName)
