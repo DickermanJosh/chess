@@ -4,14 +4,15 @@ namespace Core
     {
         public int Index { get; }
         public Coord Coord { get; }
+        public int[] AvailableDistancesToEdge { get; }
         public bool IsWhite { get; }
         public Piece Piece;
-
-        
-        public Square(int index, Coord coord, bool isWhite)
+        public SquareRenderer Renderer { get; set;  }
+        public Square(int index, Coord coord, int[] availableDistances, bool isWhite)
         {
             Index = index;
             Coord = coord;
+            AvailableDistancesToEdge = availableDistances;
             IsWhite = isWhite;
             Piece = new Piece();
         }

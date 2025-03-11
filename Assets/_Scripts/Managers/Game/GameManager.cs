@@ -42,23 +42,8 @@ public class GameManager : MonoBehaviour
         Debug.Log($"[Client GameManager] Started match as [{MyColor}] against [{OpponentName}]");
     }
 
-    // psuedo update loop
-    public void UpdateGameLoop()
+    public bool IsMyTurn()
     {
-        // If it’s White’s turn
-        Move nextMove = whitePlayer.GetMove(GameState);
-        if (nextMove != null)
-        {
-            // ApplyMoveLocally(nextMove);
-            // or send it to server if it’s the local player’s move, etc.
-        }
-
-        // If it’s Black’s turn
-        Move nextBlackMove = blackPlayer.GetMove(GameState);
-        if (nextBlackMove != null)
-        {
-            // ApplyMoveLocally(nextBlackMove);
-            // ...
-        }
+        return MyColor == GameState.ColorToMove;
     }
 }

@@ -5,7 +5,7 @@ public class GameState
 {
     public Board Board { get; set; }
     public string FEN { get; set; }
-    public bool IsWhiteToMove { get; set; }
+    public PieceColor ColorToMove { get; set; }
     public bool IsGameOver { get; set; }
 
     public GameState()
@@ -16,7 +16,7 @@ public class GameState
         FEN = FENUtils.StartFen;
         Board.LoadFEN(FEN);
 
-        IsWhiteToMove = true;
+        ColorToMove = PieceColor.White;
         IsGameOver = false;
     }
 
@@ -28,6 +28,13 @@ public class GameState
 
         Board.LoadFEN(FEN);
 
-        IsWhiteToMove = !IsWhiteToMove;
+        if (ColorToMove == PieceColor.White)
+        {
+            ColorToMove = PieceColor.Black;
+        }
+        else
+        {
+            ColorToMove = PieceColor.White;
+        }
     }
 }

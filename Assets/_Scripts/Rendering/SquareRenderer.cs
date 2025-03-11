@@ -5,7 +5,9 @@ using UnityEngine;
 public class SquareRenderer : MonoBehaviour
 {
     private SpriteRenderer spriteRenderer;
-    private Square squareData;
+    private Color DefaultColor;
+    private Color HighlightColor;
+    public Square squareData { get; private set; }
 
     /// <summary>
     /// Initialize this square renderer with the underlying Square data,
@@ -14,12 +16,23 @@ public class SquareRenderer : MonoBehaviour
     public void Init(Square squareData, Sprite defaultSquareSprite, Color squareColor, float squareSize)
     {
         this.squareData = squareData;
-
+        this.DefaultColor = squareColor;
+        if (squareData.IsWhite) 
+        {
+            HighlightColor = new Color(DefaultColor.r, DefaultColor.g, DefaultColor.b - 50);
+        }
+        else
+        {
+            HighlightColor = new Color(DefaultColor.r + 12, DefaultColor.g + 12, DefaultColor.b);
+        }
         spriteRenderer = GetComponent<SpriteRenderer>();
         spriteRenderer.sprite = defaultSquareSprite;
-        spriteRenderer.color = squareColor;
+        spriteRenderer.color = DefaultColor;
 
         gameObject.name = $"Square_{squareData.Coord.ToString()}-{squareData.Coord.ToVector2().x},{squareData.Coord.ToVector2().y}";
+
+        // Add a square click handler upon creation to make the square selectable by the player
+        gameObject.AddComponent<SquareClickHandler>();
 
         // Position this square in the world
         float xPos = squareData.Coord.file * squareSize;
@@ -28,5 +41,19 @@ public class SquareRenderer : MonoBehaviour
         transform.position = new Vector3(xPos - 3.5f, yPos - 3.5f, 0);
 
         spriteRenderer.sortingOrder = 0;
+
+        BoxCollider2D collider = gameObject.AddComponent<BoxCollider2D>();
+        collider.size = spriteRenderer.bounds.size;
+
+    }
+
+    public void AddHighlight()
+    {
+        spriteRenderer.color = HighlightColor;
+    }
+
+    public void RemoveHighlight()
+    {
+        spriteRenderer.color = DefaultColor;
     }
 }

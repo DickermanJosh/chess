@@ -92,6 +92,12 @@ public static class ClientMessageHelper
         return $"QUEUEUP|{PlayerIdentity.PlayerId}|{PlayerIdentity.PlayerName}";
     }
 
+    public static void SendMove(Square from, Square to)
+    {
+        string message = $"MOVE|{from.Coord}|{to.Coord}";
+        PlayerIdentity.Client.SendMessage(message);
+    }
+
     #endregion
 
     #region Logging

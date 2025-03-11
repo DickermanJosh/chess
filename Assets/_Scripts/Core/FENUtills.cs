@@ -16,6 +16,8 @@ public static class FENUtils
         ['q'] = PieceType.Queen
     };
 
+    public static string EnPassantSquare = "-";
+
     public static PieceType CharToPieceType(char pieceType)
     {
         return pieceTypeFromSymbol[pieceType];

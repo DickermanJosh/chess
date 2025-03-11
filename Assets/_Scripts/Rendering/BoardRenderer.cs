@@ -117,6 +117,8 @@ namespace Render
 
             renderer.Init(square, defaultSquareSprite, squareColor, squareSize);
 
+            square.Renderer = renderer;
+
             return squareObj;
         }
 

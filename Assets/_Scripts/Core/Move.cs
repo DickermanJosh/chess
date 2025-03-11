@@ -6,14 +6,16 @@ public class Move
 
     public Square From;
     public Square To;
+    public string Flags;
 
     // public string Notation;
 
-    public Move(Square from, Square to)
+    public Move(Square from, Square to, string flags)
     {
         // MadeByWhite = madeByWhite;
         From = from; 
         To = to;
+        Flags = flags;
     }
 
     override public string ToString()
