@@ -20,6 +20,18 @@ namespace Core
             { 7, 'h' }
         };
 
+        private static readonly Dictionary<char, int> FileToIntMap = new Dictionary<char, int>
+        {
+            { 'a', 0 },
+            { 'b', 1 },
+            { 'c', 2 },
+            { 'd', 3 },
+            { 'e', 4 },
+            { 'f', 5 },
+            { 'g', 6 },
+            { 'h', 7 }
+        };
+
         public Coord(int file, int rank)
         {
             this.file = file;
@@ -41,7 +53,7 @@ namespace Core
             return new Vector2(file, rank);
         }
 
-        private readonly char GetFileAsChar(int file)
+        public static char GetFileAsChar(int file)
         {
             if (FileToCharMap.TryGetValue(file, out var ch))
             {
@@ -50,6 +62,17 @@ namespace Core
             
             Debug.LogError("Invalid file index in Coord struct.");
             return 'z';
+        }
+
+        public static int GetFileAsInt(char file)
+        {
+            if (FileToIntMap.TryGetValue(file, out var i))
+            {
+                return i;
+            }
+
+            Debug.LogError("Invalid file index in Coord struct.");
+            return 99;
         }
     }
 }

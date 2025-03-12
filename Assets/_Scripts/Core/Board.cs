@@ -1,6 +1,6 @@
-using Render;
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Core
 {
@@ -56,6 +56,60 @@ namespace Core
             }
 
             return null;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="squareNotation">E.g. "e2"</param>
+        /// <returns></returns>
+        public Square GetSquareFromNotation(string squareNotation)
+        {
+            if (squareNotation.Length != 2) { return null; }
+
+            char fileAsChar = squareNotation[0];
+            int rank = (int)squareNotation[1];
+                                          
+            int file = Coord.GetFileAsInt(fileAsChar);
+
+            Coord coord = new Coord(file, rank);
+            int index = coord.GetIndex();
+
+            return GetSquareFromIndex((int)index);
+        }
+
+        /// <summary>
+        /// Places a piece on the given square in the board
+        /// </summary>
+        public readonly void UpdatePieceOnSquare(Square sq, Piece p)
+        {
+            if (sq == null) { return; }
+
+            foreach(var square in squares)
+            {
+                if (square.Equals(sq))
+                {
+                    square.Piece = p;
+                    return;
+                }
+            }
+
+            Debug.Log($"[Board] Could not find square {sq} in the board");
+        }
+        public readonly void RemovePieceFromSquare(Square sq)
+        {
+            if (sq == null) { return; }
+
+            foreach(var square in squares)
+            {
+                if (square.Equals(sq))
+                {
+                    square.Piece = new Piece();
+                    return;
+                }
+            }
+
+            Debug.Log($"[Board] Could not find square {sq} in the board");
         }
 
         private static int[] PrecomputeAvailableDistances(int file, int rank)

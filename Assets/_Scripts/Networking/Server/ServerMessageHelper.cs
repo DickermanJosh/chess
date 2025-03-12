@@ -1,4 +1,5 @@
 using Core;
+using System.Collections.Generic;
 using UnityEngine;
 
 public static class ServerMessageHelper
@@ -61,6 +62,22 @@ public static class ServerMessageHelper
         if (message.StartsWith("MOVE|"))
         {
             // parse move, find the match, etc.
+            List<Match> matches = MatchmakingManager.activeMatches;
+            Match activeMatch = null;
+            bool isInMatch = false;
+            foreach (Match match in matches)
+            {
+                if (match.WhitePlayer == conn || match.BlackPlayer  == conn)
+                {
+                    isInMatch = true;
+                    activeMatch = match;
+                    break;
+                }
+            }
+
+            if (!isInMatch || activeMatch == null) { return; }
+
+            activeMatch.OnPlayerMove(conn, message);
         }
     }
 

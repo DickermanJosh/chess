@@ -37,4 +37,5 @@ public class GameState
             ColorToMove = PieceColor.White;
         }
     }
+
 }

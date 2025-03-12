@@ -57,7 +57,6 @@ namespace Managers
                 return;
             }
 
-            Debug.Log($"TryMovePiece(): [{fromSquare.Coord}->{toSquare.Coord}]");
 
             // 1. Perform Local move validation to confirm legal move
             Square[] legalMoves = LegalMovesHandler.FindPseudoLegalMoves(fromSquare);
@@ -77,6 +76,7 @@ namespace Managers
                 return;
             }
 
+            Debug.Log($"TryMovePiece(): [{fromSquare.Coord}->{toSquare.Coord}]");
             // 2. Send the move to the server e.g "MOVE|e2|e4"
             ClientMessageHelper.SendMove(fromSquare, toSquare);
 

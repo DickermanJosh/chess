@@ -4,7 +4,7 @@ using UnityEngine;
 public static class MatchmakingManager
 {
     private static Queue<RemotePlayerConnection> waitingQueue = new Queue<RemotePlayerConnection>();
-    private static List<Match> activeMatches = new List<Match>();
+    public static List<Match> activeMatches = new List<Match>();
 
     public static void EnqueuePlayer(RemotePlayerConnection player)
     {
