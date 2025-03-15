@@ -35,27 +35,26 @@ public class Match
         Square from = gameState.Board.GetSquareFromNotation(f);
         Square to = gameState.Board.GetSquareFromNotation(t);
 
-        Square[] legalMoves = LegalMovesHandler.FindPseudoLegalMoves(from);
-        bool legal = false;
-        foreach (var move in legalMoves)
+        // Take a copy of the gamestate before attempting the move on the board
+        // because the gameState will be updated during the move gen
+        // If the move is illegal, we can simply revert back
+        GameState stateCapture = gameState;
+        if (!LegalMovesHandler.IsMoveLegal(gameState, to, from))
         {
-            if (move.Equals(to))
-            {
-                legal = true;
-                break;
-            }
-        }
-
-        if (!legal)
-        {
+            gameState = stateCapture;
             return;
         }
 
         // After confirming that the move is legal, make the move in the match's GameState
-        gameState.Board.UpdatePieceOnSquare(to, from.Piece);
-        gameState.Board.RemovePieceFromSquare(from);
+        gameState.Board.ApplyMove(from, to);
+
+        gameState.UpdateMoveOrder();
 
         // Generate new FEN string from the newly updated board
-        // string newFen = FENUtils.GenerateFEN(gameState);
+        string newFen = FENUtils.GenerateFen(gameState);
+
+        // Send the message to both clients
+        WhitePlayer.Send($"FEN|{newFen}");
+        BlackPlayer.Send($"FEN|{newFen}");
     }
 }

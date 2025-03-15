@@ -53,30 +53,23 @@ namespace Managers
                 GameManager.Instance.MyColor != GameManager.Instance.GameState.ColorToMove ||
                 GameManager.Instance.MyColor != fromSquare.Piece.GetColor())
             {
+                Debug.Log("[BoardManager TryMovePiece()] Check failed.");
                 BoardInputManager.Instance.UnselectSquare();
                 return;
             }
 
+            //  1. Perform Local move validation to confirm legal move
+            GameState thisClientGS = GameManager.Instance.GameState;
 
-            // 1. Perform Local move validation to confirm legal move
-            Square[] legalMoves = LegalMovesHandler.FindPseudoLegalMoves(fromSquare);
-            bool moveIsLegal = false;
-            foreach (Square move in legalMoves)
+            if (!LegalMovesHandler.IsMoveLegal(GameManager.Instance.GameState, toSquare, fromSquare))
             {
-                if (move == toSquare)
-                {
-                    moveIsLegal = true;
-                    break;
-                }
-            }
-
-            if (!moveIsLegal)
-            {
+                Debug.Log("[BoardManager TryMovePiece()] Move Not legal.");
+                GameManager.Instance.GameState = thisClientGS;
                 BoardInputManager.Instance.UnselectSquare();
                 return;
             }
 
-            Debug.Log($"TryMovePiece(): [{fromSquare.Coord}->{toSquare.Coord}]");
+            Debug.Log($"[BoardManager] TryMovePiece() Sending [{fromSquare.Coord}->{toSquare.Coord}]");
             // 2. Send the move to the server e.g "MOVE|e2|e4"
             ClientMessageHelper.SendMove(fromSquare, toSquare);
 

@@ -1,4 +1,5 @@
 using Core;
+using Managers;
 using UnityEngine;
 
 /// <summary>
@@ -28,6 +29,18 @@ public static class ClientMessageHelper
         if (message.Equals("QUEUEOK"))
         {
             // TODO: Start a client side queue clock and switch the queue button to a dequeue button
+        }
+    }
+    private static void CheckFenReceived(string message)
+    {
+        if (message.StartsWith("FEN|"))
+        {
+            string[] t = message.Split("|");
+            string fen = t[1];
+
+            // GameManager.Instance.GameState.Board.LoadFEN(fen);
+            BoardManager.Instance.UpdateLocalBoard(fen);
+            
         }
     }
 

@@ -49,9 +49,10 @@ public class BoardInputManager : MonoBehaviour
         if (!GameManager.Instance.IsMyTurn() || clickedSquare.Piece.GetColor() != GameManager.Instance.MyColor) return;
 
         selectedSquare = clickedSquare;
-        // For now, highlight all squares as �legal�
-        //HighlightAllSquares();
-        Square[] legalMoves = LegalMovesHandler.FindPseudoLegalMoves(selectedSquare);
+
+        GameState thisClientGS = GameManager.Instance.GameState;
+        Square[] legalMoves = LegalMovesHandler.FindLegalMoves(thisClientGS, selectedSquare);
+
         HighlightSquares(legalMoves);
     }
 

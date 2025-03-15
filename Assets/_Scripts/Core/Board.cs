@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Core
@@ -48,6 +49,15 @@ namespace Core
             return FENUtils.ParsePiecePlacementSegment(piecePlacement, this);
         }
 
+        /// <summary>
+        /// Places the from's piece on the to square and removes the piece from the to square
+        /// </summary>
+        public readonly void ApplyMove(Square from, Square To)
+        {
+            UpdatePieceOnSquare(To, from.Piece);
+            RemovePieceFromSquare(from); 
+        }
+
         public Square GetSquareFromIndex(int index)
         {
             foreach (Square square in squares)
@@ -59,9 +69,8 @@ namespace Core
         }
 
         /// <summary>
-        /// 
+        /// returns the square in the board from notation. e.g. 'e2' 
         /// </summary>
-        /// <param name="squareNotation">E.g. "e2"</param>
         /// <returns></returns>
         public Square GetSquareFromNotation(string squareNotation)
         {
@@ -78,10 +87,30 @@ namespace Core
             return GetSquareFromIndex((int)index);
         }
 
+        public readonly Square FindKing(PieceColor kingColor)
+        {
+            foreach (var square in squares)
+            {
+                Piece p = square.Piece;
+                if (p.GetType() == PieceType.King && p.GetColor() == kingColor)
+                {
+                    return square;
+                }
+            }
+
+            return null;
+        }
+
+        public readonly Board Clone()
+        {
+            Board copy = this;
+            return copy;
+        }
+
         /// <summary>
         /// Places a piece on the given square in the board
         /// </summary>
-        public readonly void UpdatePieceOnSquare(Square sq, Piece p)
+        private readonly void UpdatePieceOnSquare(Square sq, Piece p)
         {
             if (sq == null) { return; }
 
@@ -96,7 +125,8 @@ namespace Core
 
             Debug.Log($"[Board] Could not find square {sq} in the board");
         }
-        public readonly void RemovePieceFromSquare(Square sq)
+
+        private readonly void RemovePieceFromSquare(Square sq)
         {
             if (sq == null) { return; }
 
@@ -127,7 +157,8 @@ namespace Core
             Math.Min(rank, file),       // Down-Left
             Math.Min(numUp, file),      // Up-Left
             Math.Min(rank, numRight)    // Down-Right
-        };
+            };
+
             return numSquaresToEdge;
         }
     }

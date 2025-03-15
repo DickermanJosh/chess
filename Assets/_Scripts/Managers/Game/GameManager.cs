@@ -3,7 +3,7 @@ using UnityEngine;
 
 public class GameManager : MonoBehaviour
 {
-    public GameState GameState { get; private set; }
+    public GameState GameState { get; set; }
     private IPlayer whitePlayer;
     private IPlayer blackPlayer;
     public string OpponentName { get; set; }
