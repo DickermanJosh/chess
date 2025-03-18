@@ -32,17 +32,27 @@ public class BoardInputManager : MonoBehaviour
 
         // 2) If we already have a selected piece, try moving it to the clicked square
         // BoardManager.Instance.TryMovePiece(selectedSquare, clickedSquare);
-        IPlayer me = GameManager.Instance.GetMyPlayer();
-        me.OnMove(attemptedMove);
+        Player me = GameManager.Instance.GetMyPlayer();
+        int result = me.OnMove(attemptedMove);
 
-        // Then we can unselect
-        UnselectSquare();
+        // If the result is -1 that means the move was not legal.
+        // Calling OnSquareClicked again with the newly last clicked square will reselct that square if it has
+        // the correct color piece on it
+        if (result == -1)
+        {
+            UnselectSquare();
+            OnSquareClicked(clickedSquare);
+        }
+        else
+        {
+            UnselectSquare();
+        }
     }
 
     private void TrySelectSquare(Square clickedSquare)
     {
         // check if it's my turn and piece color matches me
-        if (!GameManager.Instance.IsMyTurn() || clickedSquare.Piece.GetColor() != GameManager.Instance.MyColor) return;
+        if (!GameManager.Instance.IsMyTurn() || clickedSquare.Piece.GetColor() != GameManager.Instance.MyColor) { return; }
 
         // Check if there's a piece on that square
         if (clickedSquare.Piece.GetType() == PieceType.None)

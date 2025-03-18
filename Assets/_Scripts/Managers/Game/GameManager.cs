@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Core;
 using Managers;
@@ -7,13 +8,15 @@ using UnityEngine;
 public class GameManager : MonoBehaviour
 {
     public GameState GameState { get; set; }
-    private IPlayer whitePlayer;
-    private IPlayer blackPlayer;
+    private Player whitePlayer;
+    private Player blackPlayer;
     public string OpponentName { get; set; }
     public PieceColor MyColor { get; private set; }
 
     private static GameManager _instance;
     public static GameManager Instance => _instance;
+
+    public Action StateUpdated;
 
     private void Awake()
     {
@@ -33,13 +36,13 @@ public class GameManager : MonoBehaviour
 
         if (myColor == PieceColor.White)
         {
-            whitePlayer = new LocalPlayer(PieceColor.White);
-            blackPlayer = new NetworkPlayer(PieceColor.Black);
+            whitePlayer = new Player(PieceColor.White);
+            blackPlayer = new Player(PieceColor.Black);
         }
         else
         {
-            whitePlayer = new NetworkPlayer(PieceColor.White);
-            blackPlayer = new LocalPlayer(PieceColor.Black);
+            whitePlayer = new Player(PieceColor.White);
+            blackPlayer = new Player(PieceColor.Black);
         }
 
         Debug.Log($"[Client GameManager] Started match as [{MyColor}] against [{OpponentName}]");
@@ -49,11 +52,11 @@ public class GameManager : MonoBehaviour
     {
         ClientMessageHelper.Log("Entered UpdateGameStateFromFen()");
         // Load the piece segment in this client's gamestate and render it on the board
-        // List<int> changedSquares = GameState.Board.LoadPiecesFromFen(fen);
         List<int> changedSquares = FENUtils.ParseFenString(GameState, fen);
         ClientMessageHelper.Log($"Parsed FEN. Changed {changedSquares.Count} squares.");
         BoardRenderer.Instance.RenderChangedSquares(changedSquares, GameState.Board);
         ClientMessageHelper.Log("Rendered FEN.");
+        StateUpdated?.Invoke();
     }
 
     public bool IsMyTurn()
@@ -61,7 +64,7 @@ public class GameManager : MonoBehaviour
         return MyColor == GameState.ColorToMove;
     }
 
-    public IPlayer GetMyPlayer()
+    public Player GetMyPlayer()
     {
         if (MyColor == PieceColor.White)
         {

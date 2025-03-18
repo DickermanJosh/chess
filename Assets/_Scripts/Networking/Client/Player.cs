@@ -1,39 +1,21 @@
 using Core;
 using UnityEngine;
 
-public class LocalPlayer : IPlayer
+public class Player
 {
     public PieceColor Color { get; private set; }
 
-    // We'll store the last move the user made
-    private Move pendingMove;
-
-    public LocalPlayer(PieceColor color)
+    public Player(PieceColor color)
     {
         Color = color;
     }
-
-    // public Move GetMove(GameState gameState)
-    // {
-    //     // If we have no pending move, we can't return anything valid yet.
-    //     // In practice, game loop can call this in an update cycle or coroutine
-    //     // until a valid move is returned.
-    //     if (pendingMove != null)
-    //     {
-    //         Move result = pendingMove;
-    //         pendingMove = null;
-    //         return result;
-    //     }
-
-    //     return null;
-    // }
 
     /// <summary>
     /// Called by the input system once two squares have been selected
     /// Performs local move validation and sends results to the server if they are valid
     /// </summary>
-    /// <param name="move"></param>
-    public void OnMove(Move move)
+    /// <returns> 0 - Move sent to server. -1 - Move not legal. -2 - Wrong color to move or piece color selected </returns>
+    public int OnMove(Move move)
     {
         // todo: check if it is the players turn
         // todo: maybe validate move here, even though it will likely already be validated.
@@ -53,7 +35,7 @@ public class LocalPlayer : IPlayer
             Debug.Log($"ToSquare: {toSquare.Index} - {toSquare.Piece.GetType()}");
             Debug.Log($"MyColor: {GameManager.Instance.MyColor} MoveColor: {GameManager.Instance.GameState.ColorToMove}");
             Debug.Log($"Piece Color: {fromSquare.Piece.GetColor()}");
-            return;
+            return -2;
         }
 
         //  1. Perform Local move validation to confirm legal move
@@ -63,7 +45,7 @@ public class LocalPlayer : IPlayer
         {
             Debug.Log("[BoardManager TryMovePiece()] Move Not legal.");
             // GameManager.Instance.GameState = thisClientGS;
-            return;
+            return -1;
         }
 
         Debug.Log($"[BoardManager] TryMovePiece() Sending [{fromSquare.Coord}->{toSquare.Coord}]");
@@ -80,6 +62,6 @@ public class LocalPlayer : IPlayer
             GameManager.Instance.GameState.ColorToMove = PieceColor.Black;
         }
 
-        pendingMove = move;
+        return 0;
     }
 }

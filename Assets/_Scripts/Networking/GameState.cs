@@ -12,6 +12,7 @@ public class GameState
     public bool BlackKingSideCastle { get; set; }
     public bool BlackQueenSideCastle { get; set; }
     public string EnPassantSquare { get; set; }
+    public string CurrentFen { get; set; }
 
     public GameState()
     {
@@ -19,6 +20,7 @@ public class GameState
         Board.Init();
 
         Board.LoadPiecesFromFen(FENUtils.StartFen);
+        CurrentFen = FENUtils.StartFen;
 
         ColorToMove = PieceColor.White;
 
