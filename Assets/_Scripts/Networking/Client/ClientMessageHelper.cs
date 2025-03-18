@@ -14,34 +14,36 @@ public static class ClientMessageHelper
         CheckWelcomeReceived(message);
         CheckQueueOkReceived(message);
         CheckMatchStartedReceived(message);
+        CheckFenReceived(message);
 
     }
     private static void CheckWelcomeReceived(string message)
     {
-       if (message.Equals("WELCOME"))
-        {
-            
-        }
+       if (!message.Equals("WELCOME")) { return; }
     }
 
     private static void CheckQueueOkReceived(string message)
     {
-        if (message.Equals("QUEUEOK"))
-        {
-            // TODO: Start a client side queue clock and switch the queue button to a dequeue button
-        }
+        if (!message.Equals("QUEUEOK")) { return; }
+        // TODO: Start a client side queue clock and switch the queue button to a dequeue button
     }
     private static void CheckFenReceived(string message)
     {
-        if (message.StartsWith("FEN|"))
-        {
-            string[] t = message.Split("|");
-            string fen = t[1];
+        if (!message.StartsWith("FEN|")) { return; }
 
-            // GameManager.Instance.GameState.Board.LoadFEN(fen);
-            BoardManager.Instance.UpdateLocalBoard(fen);
-            
-        }
+        Log("Entered FEN received.");
+
+        string[] t = message.Split("|");
+        string fen = t[1];
+        Log($"Extracted FEN: {fen}");
+
+        // GameManager.Instance.GameState.Board.LoadFEN(fen);
+        // BoardManager.Instance.UpdateLocalBoard(fen);
+
+        UnityMainThreadDispatcher.Enqueue(() => 
+        {
+            GameManager.Instance.UpdateGameStateFromFen(fen);
+        });
     }
 
     /// <summary>
@@ -52,38 +54,36 @@ public static class ClientMessageHelper
     /// <param name="message"></param>
     private static void CheckMatchStartedReceived(string message)
     {
-        if (message.StartsWith("MATCH_START|"))
+        if (!message.StartsWith("MATCH_START|")) { return; }
+
+        string[] m = message.Split('|');
+        string colorStr = m[1];
+        string opponent = m[2];
+        PieceColor color = PieceColor.None;
+
+        if (colorStr.Equals("WHITE"))
         {
-            Log($"Match start hit: raw string: {message}");
-            string[] m = message.Split('|');
-            string colorStr = m[1];
-            string opponent = m[2];
-            PieceColor color = PieceColor.None;
-
-            if (colorStr.Equals("WHITE"))
-            {
-                color = PieceColor.White;
-            }
-            else
-            {
-                color = PieceColor.Black;
-            }
-
-            if (color == PieceColor.None)
-            {
-                Debug.Log($"[Client] Could not interpret piece color assigned by server. Received: {colorStr}");
-                return;
-            }
-
-            // Start online match with local player and network player
-            UnityMainThreadDispatcher.Enqueue(() =>
-            {
-                GameManager.Instance.OpponentName = opponent;
-                GameManager.Instance.StartOnlineGame(color);
-
-                SceneLoader.Instance.LoadScene(SceneLoader.OnlineGame);
-            });
+            color = PieceColor.White;
         }
+        else
+        {
+            color = PieceColor.Black;
+        }
+
+        if (color == PieceColor.None)
+        {
+            Debug.Log($"[Client] Could not interpret piece color assigned by server. Received: {colorStr}");
+            return;
+        }
+
+        // Start online match with local player and network player
+        UnityMainThreadDispatcher.Enqueue(() =>
+        {
+            GameManager.Instance.OpponentName = opponent;
+            GameManager.Instance.StartOnlineGame(color);
+
+            SceneLoader.Instance.LoadScene(SceneLoader.OnlineGame);
+        });
     }
 
     #endregion

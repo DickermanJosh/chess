@@ -1,4 +1,5 @@
 using Core;
+using UnityEngine;
 public class Match
 {
     public RemotePlayerConnection WhitePlayer { get; private set; }
@@ -31,19 +32,20 @@ public class Match
         string[] tokens = moveData.Split('|');
         string f = tokens[1];
         string t = tokens[2];
+        Debug.Log($"[Match] OnPlayerMove(): [to] = {t} [from] = {f}");
+
         // TODO: Check for pawn promotions
+
         Square from = gameState.Board.GetSquareFromNotation(f);
         Square to = gameState.Board.GetSquareFromNotation(t);
 
-        // Take a copy of the gamestate before attempting the move on the board
-        // because the gameState will be updated during the move gen
-        // If the move is illegal, we can simply revert back
-        GameState stateCapture = gameState;
-        if (!LegalMovesHandler.IsMoveLegal(gameState, to, from))
+        if (from == null || to == null)
         {
-            gameState = stateCapture;
+            ServerMessageHelper.Log($"Error casting to squares from notation OnPlayerMove()");
             return;
         }
+
+        if (!LegalMovesHandler.IsMoveLegal(gameState, to, from)) { return; }
 
         // After confirming that the move is legal, make the move in the match's GameState
         gameState.Board.ApplyMove(from, to);

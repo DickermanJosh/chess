@@ -40,7 +40,8 @@ namespace Core
 
         public readonly int GetIndex()
         {
-            return file * 8 + rank;
+            //return file * 8 + rank;
+            return rank * 8 + file;
         }
 
         override public readonly string ToString()

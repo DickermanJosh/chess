@@ -1,6 +1,7 @@
 using Core;
 using System.Collections.Generic;
 using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 
 /// <summary>
@@ -34,9 +35,9 @@ public class LegalMovesHandler : MonoBehaviour
 
     public static bool IsMoveLegal(GameState gameState, Square to, Square from)
     {
-        FindLegalMoves(gameState, from);
+        Square[] legalMoves = FindLegalMoves(gameState, from);
 
-        foreach(var move in _legalMoveList)
+        foreach(var move in legalMoves)
         {
             if (move.Equals(to))
             {
@@ -52,24 +53,27 @@ public class LegalMovesHandler : MonoBehaviour
     {
         _legalMoveList.Clear();
         _movesInLegalList = 0;
+        GameState gameStateCopy = gameState;
 
-        Square[] pseudos = FindPseudoLegalMoves(gameState, sq);
+        Square[] pseudos = FindPseudoLegalMoves(gameStateCopy, sq);
 
-        if (pseudos.Length == 0) { return pseudos; }
+        return pseudos;
+        // if (pseudos.Length == 0) { return pseudos; }
 
-        foreach (var move in pseudos)
-        {
-            Board temp = gameState.Board.Clone();
-            temp.ApplyMove(sq, move);
 
-            if (!CheckUtils.IsKingInCheck(temp, sq.Piece.GetColor()))
-            {
-                //_pseudoLegalMoveList.Remove(move);
-                _legalMoveList.Add(move);
-            }
-        }
+        // foreach (var move in pseudos)
+        // {
+        //     Board temp = gameStateCopy.Board.Clone();
+        //     temp.ApplyMove(sq, move);
 
-        return _legalMoveList.ToArray();
+        //     if (!CheckUtils.IsKingInCheck(temp, sq.Piece.GetColor()))
+        //     {
+        //         //_pseudoLegalMoveList.Remove(move);
+        //         _legalMoveList.Add(move);
+        //     }
+        // }
+
+        // return _legalMoveList.ToArray();
     }
 
     /// <summary>

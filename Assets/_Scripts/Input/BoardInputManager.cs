@@ -25,33 +25,36 @@ public class BoardInputManager : MonoBehaviour
         if (selectedSquare == null)
         {
             TrySelectSquare(clickedSquare);
+            return;
         }
-        else
-        {
-            // 2) If we already have a selected piece, try moving it to the clicked square
-            BoardManager.Instance.TryMovePiece(selectedSquare, clickedSquare);
 
-            // Then we can unselect
-            UnselectSquare();
-        }
+        Move attemptedMove = new Move(selectedSquare, clickedSquare, "");
+
+        // 2) If we already have a selected piece, try moving it to the clicked square
+        // BoardManager.Instance.TryMovePiece(selectedSquare, clickedSquare);
+        IPlayer me = GameManager.Instance.GetMyPlayer();
+        me.OnMove(attemptedMove);
+
+        // Then we can unselect
+        UnselectSquare();
     }
 
     private void TrySelectSquare(Square clickedSquare)
     {
+        // check if it's my turn and piece color matches me
+        if (!GameManager.Instance.IsMyTurn() || clickedSquare.Piece.GetColor() != GameManager.Instance.MyColor) return;
+
         // Check if there's a piece on that square
         if (clickedSquare.Piece.GetType() == PieceType.None)
         {
             // No piece to select
+            Debug.Log($"TrySelectSquare: No piece on square# {clickedSquare.Index}");
             return;
         }
 
-        // check if it's my turn and piece color matches me
-        if (!GameManager.Instance.IsMyTurn() || clickedSquare.Piece.GetColor() != GameManager.Instance.MyColor) return;
-
         selectedSquare = clickedSquare;
 
-        GameState thisClientGS = GameManager.Instance.GameState;
-        Square[] legalMoves = LegalMovesHandler.FindLegalMoves(thisClientGS, selectedSquare);
+        Square[] legalMoves = LegalMovesHandler.FindLegalMoves(GameManager.Instance.GameState, selectedSquare);
 
         HighlightSquares(legalMoves);
     }
@@ -60,16 +63,6 @@ public class BoardInputManager : MonoBehaviour
     {
         foreach (Square sq in squaresToHighlight)
         {
-            sq.Renderer.AddHighlight();
-        }
-    }
-    private void HighlightAllSquares()
-    {
-        // Temporary approach: highlight everything
-        var board = GameManager.Instance.GameState.Board;
-        foreach (Square sq in board.squares)
-        {
-            // SquareHighlightManager.Instance.HighlightSquare(sq, Color.yellow);
             sq.Renderer.AddHighlight();
         }
     }

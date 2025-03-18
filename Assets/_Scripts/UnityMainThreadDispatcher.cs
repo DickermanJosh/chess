@@ -7,18 +7,17 @@ public class UnityMainThreadDispatcher : MonoBehaviour
     private static readonly Queue<Action> actions = new Queue<Action>();
 
     private static UnityMainThreadDispatcher _instance;
-    public static UnityMainThreadDispatcher Instance
+    public static UnityMainThreadDispatcher Instance => _instance;
+
+    private void Awake()
     {
-        get
+        if (_instance != null)
         {
-            if (_instance == null)
-            {
-                GameObject go = new GameObject("UnityMainThreadDispatcher");
-                _instance = go.AddComponent<UnityMainThreadDispatcher>();
-                DontDestroyOnLoad(go);
-            }
-            return _instance;
+            Destroy(_instance);
+            _instance = this;
         }
+
+        DontDestroyOnLoad(gameObject);
     }
 
     public static void Enqueue(Action action)

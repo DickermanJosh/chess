@@ -18,7 +18,7 @@ public class GameState
         Board = new Board(64);
         Board.Init();
 
-        Board.LoadFEN(FENUtils.StartFen);
+        Board.LoadPiecesFromFen(FENUtils.StartFen);
 
         ColorToMove = PieceColor.White;
 

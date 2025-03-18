@@ -12,20 +12,9 @@ public class NetworkPlayer : IPlayer
         Color = color;
     }
 
-    public Move GetMove(GameState gameState)
-    {
-        if (pendingMove != null)
-        {
-            Move move = pendingMove;
-            pendingMove = null;
-            return move;
-        }
-        return null;
-    }
-
     // Called by client (TCPClient.OnMessageReceived, etc.)
     // whenever a "MOVE|" command arrives from the server.
-    public void OnNetworkMoveReceived(Move move)
+    public void OnMove(Move move)
     {
         pendingMove = move;
     }

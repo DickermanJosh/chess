@@ -26,10 +26,10 @@ public static class FENUtils
 
     #region Applying FEN to GameStates
     /// <summary>
-    /// Meant to be called by clients when receiving a new FEN from the server
-    /// Will update the game state to match piece placement, castling rights, move order
+    /// Meant to be called by clients when receiving a new FEN from the server.
+    /// Will update the game state to match piece placement, castling rights, en passant square, move order
     /// </summary>
-    public static void ParseFenString(GameState gameState, string fen)
+    public static List<int> ParseFenString(GameState gameState, string fen)
     {
         string[] segments = fen.Split(' ');
         string piecePlacement = segments[0];
@@ -39,12 +39,14 @@ public static class FENUtils
         string fullMoveClock = segments[4];
         string halfMoveClock = segments[5];
 
-        ParsePiecePlacementSegment(piecePlacement, gameState.Board);
+        List<int> changedSquares = ParsePiecePlacementSegment(piecePlacement, gameState.Board);
         ParseColorToMoveSegment(gameState, colorToMove);
         ParseCastlingRightsSegment(gameState, castlingRights);
         ParseEnPassantSquareSegment(gameState, enPassantSquare);
         ParseFullClockSegment(gameState, fullMoveClock);
         ParseHalfClockSegment(gameState, halfMoveClock);
+
+        return changedSquares;
     }
 
 

@@ -6,7 +6,9 @@ public interface IPlayer
     // This could be synchronous or asynchronous depending on your design.
     // For example, you can have: Move GetMove(GameState state) 
     // or an async Task<Move> GetMoveAsync(GameState state)
-    Move GetMove(GameState gameState);
+    // Move GetMove(GameState gameState);
+
+    void OnMove(Move move);
 
     PieceColor Color { get; }
 }

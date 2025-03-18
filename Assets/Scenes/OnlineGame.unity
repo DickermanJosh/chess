@@ -467,7 +467,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1546679242}
   - component: {fileID: 1546679243}
-  - component: {fileID: 1546679244}
   m_Layer: 0
   m_Name: Board Input Manager
   m_TagString: Untagged
@@ -500,18 +499,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9e0f65530b5a1b642aa091dbc6709372, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &1546679244
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1546679241}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 0953652c13093144793dfb7d66561407, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!1660057539 &9223372036854775807

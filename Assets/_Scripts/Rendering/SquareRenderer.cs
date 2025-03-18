@@ -29,7 +29,7 @@ public class SquareRenderer : MonoBehaviour
         spriteRenderer.sprite = defaultSquareSprite;
         spriteRenderer.color = DefaultColor;
 
-        gameObject.name = $"Square_{squareData.Coord.ToString()}-{squareData.Coord.ToVector2().x},{squareData.Coord.ToVector2().y}";
+        gameObject.name = $"Square_{squareData.Coord.ToString()}-({squareData.Coord.ToVector2().x},{squareData.Coord.ToVector2().y})-{squareData.Index}";
 
         // Add a square click handler upon creation to make the square selectable by the player
         gameObject.AddComponent<SquareClickHandler>();

@@ -14,71 +14,67 @@ public static class ServerMessageHelper
     }
     private static void CheckConnectionReceived(RemotePlayerConnection conn, string message)
     {
-        if (message.StartsWith("CONNECT_ID|"))
-        {
-            // Example: "CONNECT_ID|myGuid|CoolChessDude"
-            string[] parts = message.Split('|');
-            // parts[0] = "CONNECT_ID"
-            // parts[1] = <player_id>
-            // parts[2] = <player_name>
+        if (!message.StartsWith("CONNECT_ID|")) { return; }
 
-            string clientId = parts[1];
-            string clientName = parts[2];
+        // Example: "CONNECT_ID|myGuid|CoolChessDude"
+        string[] parts = message.Split('|');
+        // parts[0] = "CONNECT_ID"
+        // parts[1] = <player_id>
+        // parts[2] = <player_name>
 
-            // Store these in the RemotePlayerConnection (if you trust the client's ID)
-            conn.PlayerId = clientId;
-            conn.PlayerName = clientName;
+        string clientId = parts[1];
+        string clientName = parts[2];
 
-            Debug.Log($"[Server] Client {conn.PlayerName} established with ID | {conn.PlayerId}");
+        // Store these in the RemotePlayerConnection (if you trust the client's ID)
+        conn.PlayerId = clientId;
+        conn.PlayerName = clientName;
 
-            // Optionally, send back an acknowledgment
-            conn.Send("WELCOME");
-        }
+        Debug.Log($"[Server] Client {conn.PlayerName} established with ID | {conn.PlayerId}");
+
+        // Optionally, send back an acknowledgment
+        conn.Send("WELCOME");
     }
     private static void CheckQueueReceived(RemotePlayerConnection conn, string message)
     {
-        if (message.StartsWith("QUEUEUP|"))
-        {
-            var parts = message.Split('|');
-            // parts[0] = "QUEUEUP"
-            // parts[1] = <player_id>
-            // parts[2] = <player_name>
+        if (!message.StartsWith("QUEUEUP|")) { return; }
 
-            // string playerId = parts[1];
-            // string playerName = parts[2];
+        var parts = message.Split('|');
+        // parts[0] = "QUEUEUP"
+        // parts[1] = <player_id>
+        // parts[2] = <player_name>
 
-            // Update conn's known name + ID if needed
-            // conn.PlayerName = playerName;
-            // conn.PlayerId is typically set at creation,
-            // but if you're reading ID from the message, you can store it.
+        // string playerId = parts[1];
+        // string playerName = parts[2];
 
-            MatchmakingManager.EnqueuePlayer(conn);
+        // Update conn's known name + ID if needed
+        // conn.PlayerName = playerName;
+        // conn.PlayerId is typically set at creation,
+        // but if you're reading ID from the message, you can store it.
 
-        }
+        MatchmakingManager.EnqueuePlayer(conn);
     }
 
     private static void CheckMoveReceived(RemotePlayerConnection conn, string message) 
     {
-        if (message.StartsWith("MOVE|"))
+        if (!message.StartsWith("MOVE|")) { return; }
+
+        // parse move, find the match, etc.
+        List<Match> matches = MatchmakingManager.activeMatches;
+        Match activeMatch = null;
+        bool isInMatch = false;
+        foreach (Match match in matches)
         {
-            // parse move, find the match, etc.
-            List<Match> matches = MatchmakingManager.activeMatches;
-            Match activeMatch = null;
-            bool isInMatch = false;
-            foreach (Match match in matches)
+            if (match.WhitePlayer == conn || match.BlackPlayer == conn)
             {
-                if (match.WhitePlayer == conn || match.BlackPlayer  == conn)
-                {
-                    isInMatch = true;
-                    activeMatch = match;
-                    break;
-                }
+                isInMatch = true;
+                activeMatch = match;
+                break;
             }
-
-            if (!isInMatch || activeMatch == null) { return; }
-
-            activeMatch.OnPlayerMove(conn, message);
         }
+
+        if (!isInMatch || activeMatch == null) { return; }
+
+        activeMatch.OnPlayerMove(conn, message);
     }
 
 

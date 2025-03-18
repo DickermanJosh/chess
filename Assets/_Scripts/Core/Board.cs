@@ -36,13 +36,13 @@ namespace Core
 
         /// <summary>
         /// Parse the FEN string and update only changed squares.
-        /// Board is updated both in memory and on screen.
         /// 
         /// Example FEN: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        /// What will be used here: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR"
         /// </summary>
-        public List<int> LoadFEN(string fen)
+        public List<int> LoadPiecesFromFen(string fen)
         {
-            // For now, just parse up to the first space (piece placement only).
+            // Just parse up to the first space (piece placement only).
             string[] parts = fen.Split(' ');
             string piecePlacement = parts[0];
 
@@ -52,19 +52,31 @@ namespace Core
         /// <summary>
         /// Places the from's piece on the to square and removes the piece from the to square
         /// </summary>
-        public readonly void ApplyMove(Square from, Square To)
+        public readonly void ApplyMove(Square From, Square To)
         {
-            UpdatePieceOnSquare(To, from.Piece);
-            RemovePieceFromSquare(from); 
+            Square _to = null;
+            Square _from = null;
+
+            foreach(var s in squares)
+            {
+                if (s.Equals(To)) { _to = s; }
+                else if (s.Equals(From)) { _from = s; }
+
+                if (_to != null && _from != null) { break; }
+            }
+
+            UpdatePieceOnSquare(_to, _from.Piece);
+            RemovePieceFromSquare(_from); 
         }
 
         public Square GetSquareFromIndex(int index)
         {
-            foreach (Square square in squares)
+            foreach (var sq in squares)
             {
-                if (square.Index == index) return square;
+                if (sq.Index == index) { return sq; }
             }
-
+            
+            Debug.Log($"[Board] GetSquareFromIndex(int index) could not resolve index [{index}] into square");
             return null;
         }
 
@@ -74,17 +86,22 @@ namespace Core
         /// <returns></returns>
         public Square GetSquareFromNotation(string squareNotation)
         {
-            if (squareNotation.Length != 2) { return null; }
+            // if (squareNotation.Length != 2) { return null; }
 
-            char fileAsChar = squareNotation[0];
-            int rank = (int)squareNotation[1];
+            char fileChar = squareNotation[0];
+            char rankChar = squareNotation[1];
                                           
-            int file = Coord.GetFileAsInt(fileAsChar);
+            // int file = Coord.GetFileAsInt(fileAsChar);
+            int file = fileChar - 'a';
+            int rank = rankChar - '1';
+
+            if (file < 0 || file > 7 || rank < 0 || rank > 7)
+                return null; // out of standard chess bounds
 
             Coord coord = new Coord(file, rank);
             int index = coord.GetIndex();
 
-            return GetSquareFromIndex((int)index);
+            return GetSquareFromIndex(index);
         }
 
         public readonly Square FindKing(PieceColor kingColor)

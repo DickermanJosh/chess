@@ -1,4 +1,7 @@
+using System.Collections.Generic;
 using Core;
+using Managers;
+using Render;
 using UnityEngine;
 
 public class GameManager : MonoBehaviour
@@ -42,8 +45,29 @@ public class GameManager : MonoBehaviour
         Debug.Log($"[Client GameManager] Started match as [{MyColor}] against [{OpponentName}]");
     }
 
+    public void UpdateGameStateFromFen(string fen)
+    {
+        ClientMessageHelper.Log("Entered UpdateGameStateFromFen()");
+        // Load the piece segment in this client's gamestate and render it on the board
+        // List<int> changedSquares = GameState.Board.LoadPiecesFromFen(fen);
+        List<int> changedSquares = FENUtils.ParseFenString(GameState, fen);
+        ClientMessageHelper.Log($"Parsed FEN. Changed {changedSquares.Count} squares.");
+        BoardRenderer.Instance.RenderChangedSquares(changedSquares, GameState.Board);
+        ClientMessageHelper.Log("Rendered FEN.");
+    }
+
     public bool IsMyTurn()
     {
         return MyColor == GameState.ColorToMove;
+    }
+
+    public IPlayer GetMyPlayer()
+    {
+        if (MyColor == PieceColor.White)
+        {
+            return whitePlayer;
+        }
+
+        return blackPlayer;
     }
 }
