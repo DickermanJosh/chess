@@ -182,3 +182,7 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/unity,c++,macos,windows,linux
+
+# VS Code
+.vsconfig
+.vscode/
