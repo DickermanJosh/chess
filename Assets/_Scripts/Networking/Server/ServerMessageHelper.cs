@@ -8,9 +8,11 @@ public static class ServerMessageHelper
 
     public static void HandleReceivedMessage(RemotePlayerConnection conn, string message)
     {
+        Log("HandleReceivedMessages()");
         CheckConnectionReceived(conn, message);
         CheckQueueReceived(conn, message);
         CheckMoveReceived(conn, message);
+        CheckResignReceived(conn, message);
     }
     private static void CheckConnectionReceived(RemotePlayerConnection conn, string message)
     {
@@ -77,6 +79,14 @@ public static class ServerMessageHelper
         activeMatch.OnPlayerMove(conn, message);
     }
 
+    private static void CheckResignReceived(RemotePlayerConnection conn, string message)
+    {
+        Log("CheckResign() hit");
+        if (!message.Equals("RESIGN")) { return; }
+        Log("CheckResign() passed");
+        
+        MatchmakingManager.EndMatchWithPlayer(conn);
+    }
 
     #endregion
 

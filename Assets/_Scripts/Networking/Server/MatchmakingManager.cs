@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using UnityEditor;
 using UnityEngine;
 
 public static class MatchmakingManager
@@ -41,5 +42,26 @@ public static class MatchmakingManager
         activeMatches.Add(match);
 
         ServerMessageHelper.Log($"Match created for {p1.PlayerName}|WHITE and {p2.PlayerName}|BLACK.");
+    }
+
+    /// <summary>
+    /// Looks for an active match with a provided RemotePlayerConnection.
+    /// Ends the match if it exists and sends the MATCH_END message to both players
+    /// with info on who won and why
+    /// </summary>
+    public static void EndMatchWithPlayer(RemotePlayerConnection player)
+    {
+        ServerMessageHelper.Log("EndMatchWithPlayer() hit");
+        for (int i = 0; i < activeMatches.Count; i++)
+        {
+            Match match = activeMatches[i];
+            if (match.IsPlayerInThisMatch(player))
+            {
+                ServerMessageHelper.Log("Active match found.");
+                match.End();
+                activeMatches.RemoveAt(i);
+                ServerMessageHelper.Log("Match Removed from active matches");
+            }
+        }
     }
 }

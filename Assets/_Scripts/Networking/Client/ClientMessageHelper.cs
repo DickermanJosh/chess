@@ -15,7 +15,7 @@ public static class ClientMessageHelper
         CheckQueueOkReceived(message);
         CheckMatchStartedReceived(message);
         CheckFenReceived(message);
-
+        CheckMatchEndReceived(message);
     }
     private static void CheckWelcomeReceived(string message)
     {
@@ -91,28 +91,60 @@ public static class ClientMessageHelper
         });
     }
 
+    private static void CheckMatchEndReceived(string message)
+    {
+        if (!message.StartsWith("MATCH_END")) { return; }
+
+        // TODO: message will eventually look something like MATCH_END|checkmate|winner_name
+        // Provide a pop up panel with end of match info when that is the case
+        // for now, just return to lobby
+
+        UnityMainThreadDispatcher.Enqueue(() => 
+        {
+            GameManager.Instance.ResetToDefault();
+            SceneLoader.Instance.LoadScene(SceneLoader.Lobby);
+        });
+    }
+
     #endregion
 
     #region Messages To Send
 
     /// <summary>
-    /// Returns the CONNECT_ID message with the stored player identity
+    /// Sends the CONNECT_ID message to the server with the stored player identity
     /// </summary>
-    public static string GetConnectId()
+    public static void SendConnectId()
     {
-        return $"CONNECT_ID|{PlayerIdentity.PlayerId}|{PlayerIdentity.PlayerName}";
+        string message = $"CONNECT_ID|{PlayerIdentity.PlayerId}|{PlayerIdentity.PlayerName}";
+        PlayerIdentity.Client.SendMessage(message);
     }
     /// <summary>
-    /// Returns the QUEUEUP message with the stored player identity
+    /// Sends the QUEUEUP message to the server with the stored player identity
     /// </summary>
-    public static string GetQueueUp()
+    public static void SendQueueUp()
     {
-        return $"QUEUEUP|{PlayerIdentity.PlayerId}|{PlayerIdentity.PlayerName}";
+        string message = $"QUEUEUP|{PlayerIdentity.PlayerId}|{PlayerIdentity.PlayerName}";
+        PlayerIdentity.Client.SendMessage(message);
     }
 
+    /// <summary>
+    /// Sends the MOVE message to the server with the players attempted move
+    /// </summary>
     public static void SendMove(Square from, Square to)
     {
         string message = $"MOVE|{from.Coord}|{to.Coord}";
+        PlayerIdentity.Client.SendMessage(message);
+    }
+
+    /// <summary>
+    /// Sends the RESIGN message to the server, prompting the players current match to end.
+    /// Keeps online connection, just ends current match
+    /// </summary>
+    /// <param name="from"></param>
+    /// <param name="to"></param>
+    public static void SendResign()
+    {
+        const string message = "RESIGN";
         PlayerIdentity.Client.SendMessage(message);
     }
 

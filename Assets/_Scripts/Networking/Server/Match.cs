@@ -1,4 +1,5 @@
 using Core;
+using UnityEditor;
 using UnityEngine;
 public class Match
 {
@@ -74,6 +75,28 @@ public class Match
         // Send the message to both clients
         WhitePlayer.Send($"FEN|{newFen}|{move}");
         BlackPlayer.Send($"FEN|{newFen}|{move}");
+    }
+
+    public bool IsPlayerInThisMatch(RemotePlayerConnection player)
+    {
+        return player == WhitePlayer || player == BlackPlayer;
+    }
+
+    /// <summary>
+    /// Destroys this match instance
+    /// TODO: Differentiate MATCH_END messages for checkmate, resignation, etc
+    /// </summary>
+    public void End()
+    {
+        ServerMessageHelper.Log("End() hit");
+        WhitePlayer.Send("MATCH_END");
+        BlackPlayer.Send("MATCH_END");
+        ServerMessageHelper.Log("MATCH_END sent");
+
+        WhitePlayer.IsInMatch = false;
+        BlackPlayer.IsInMatch = false;
+
+        ServerMessageHelper.Log($"Match ended between {WhitePlayer.PlayerName} and {BlackPlayer.PlayerName}");
     }
 
 }

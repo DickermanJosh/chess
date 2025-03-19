@@ -47,8 +47,8 @@ public class TCPClient
             // Sending ID's from the client like this is not secure, but for a small-scale
             // application like this one that doesn't yet have a server-side db - it works.
             // ------------------ Send ID + name handshake -----------------------
-            string message = ClientMessageHelper.GetConnectId();
-            SendMessage(message);
+            ClientMessageHelper.SendConnectId();
+            // SendMessage(message);
             // -------------------------------------------------------------------
         }
         catch (Exception ex)

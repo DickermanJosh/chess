@@ -71,4 +71,18 @@ public class GameManager : MonoBehaviour
 
         return blackPlayer;
     }
+
+    public void ResetToDefault()
+{
+    GameState = null;
+    OpponentName = "";
+    MyColor = PieceColor.None;
+
+    whitePlayer = null;
+    blackPlayer = null;
+
+    StateUpdated = null;
+
+    Debug.Log("[GameManager] Reset to default state.");
+}
 }
