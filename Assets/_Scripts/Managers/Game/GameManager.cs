@@ -50,12 +50,10 @@ public class GameManager : MonoBehaviour
 
     public void UpdateGameStateFromFen(string fen)
     {
-        ClientMessageHelper.Log("Entered UpdateGameStateFromFen()");
         // Load the piece segment in this client's gamestate and render it on the board
         List<int> changedSquares = FENUtils.ParseFenString(GameState, fen);
-        ClientMessageHelper.Log($"Parsed FEN. Changed {changedSquares.Count} squares.");
         BoardRenderer.Instance.RenderChangedSquares(changedSquares, GameState.Board);
-        ClientMessageHelper.Log("Rendered FEN.");
+
         StateUpdated?.Invoke();
     }
 

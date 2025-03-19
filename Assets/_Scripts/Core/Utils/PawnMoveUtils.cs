@@ -118,7 +118,7 @@ public static class PawnMoveUtils
         if (!LegalMovesHandler.IsSquareOccupied(board, enPassantIndex))
         {
             LegalMovesHandler.AddMove(board, enPassantIndex);
-            gameState.EnPassantSquare = board.squares[enPassantIndex].Coord.ToString();
+            // gameState.EnPassantSquare = board.squares[enPassantIndex].Coord.ToString();
         }
     }
 
@@ -143,5 +143,34 @@ public static class PawnMoveUtils
             return true;
 
         return false;
+    }
+
+    /// <summary>
+    /// Checks if a move will result in a position allowing for en passant.
+    /// Was the last move a double pawn push and is an opponents pawn next to it
+    /// </summary>
+    /// <param name="to"></param>
+    /// <param name="from"></param>
+    public static void CheckIfMoveAllowsEnPassant(GameState gameState, Move move)
+    {
+        Square from = move.From;
+        Square to = move.To;
+        if (from.Piece.GetType() != PieceType.Pawn) { return; }
+        // If true, the move being made is a double pawn push
+        if ((gameState.ColorToMove == PieceColor.White && from.Index + 16 == to.Index) ||
+            (gameState.ColorToMove == PieceColor.Black && from.Index - 16 == to.Index))
+        {
+            // TODO: Check file first
+            Square left = gameState.Board.GetSquareFromIndex(to.Index - 1);
+            Square right = gameState.Board.GetSquareFromIndex(to.Index + 1);
+
+            // Check if there are enemy pawns adjacent to the pushed pawn
+            if (left.Piece.GetType() != PieceType.Pawn && right.Piece.GetType() != PieceType.Pawn) { return; }
+            if (gameState.ColorToMove == left.Piece.GetColor() && gameState.ColorToMove == right.Piece.GetColor()) { return; }
+
+            int EnPassantIndex = (gameState.ColorToMove == PieceColor.White) ? to.Index - 8 : to.Index + 8;
+            Square EnPassantSquare = gameState.Board.GetSquareFromIndex(EnPassantIndex);
+            gameState.EnPassantSquare = EnPassantSquare.Coord.ToString();
+        }
     }
 }

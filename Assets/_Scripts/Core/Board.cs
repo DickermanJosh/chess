@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.AI;
 
 namespace Core
 {
@@ -52,7 +53,7 @@ namespace Core
         /// <summary>
         /// Places the from's piece on the to square and removes the piece from the to square
         /// </summary>
-        public readonly void ApplyMove(Square From, Square To)
+        public readonly void ApplyMove(Square From, Square To, string EnPassantSquare)
         {
             Square _to = null;
             Square _from = null;
@@ -67,9 +68,28 @@ namespace Core
 
             UpdatePieceOnSquare(_to, _from.Piece);
             RemovePieceFromSquare(_from); 
+
+            // Check if the move is En Passant, remove the opponent's pawn if it was
+            Debug.Log($"EPSquare: {EnPassantSquare}. To Coord: {To.Coord.ToString()}");
+            if (EnPassantSquare.Equals("-")) { return; }
+            if (!To.Coord.ToString().Equals(EnPassantSquare)) { return; }
+            Debug.Log($"En Passant taken.");
+
+            PieceColor col = _to.Piece.GetColor();
+            int index = _to.Index;
+
+            // White => -8 to move back behind the pushed En Passant pawn
+            index = (col == PieceColor.White) ? index - 8 : index + 8;
+            // if (col == PieceColor.White) { index -= 8; }
+            // // Black +8 to move back behind the pushed pawn
+            // else { index += 8; }
+
+            Square opponentPawn = GetSquareFromIndex(index);
+            RemovePieceFromSquare(opponentPawn);
+            Debug.Log($"Opponent pawn removed at index {index}");
         }
 
-        public Square GetSquareFromIndex(int index)
+        public readonly Square GetSquareFromIndex(int index)
         {
             foreach (var sq in squares)
             {
@@ -146,6 +166,7 @@ namespace Core
         private readonly void RemovePieceFromSquare(Square sq)
         {
             if (sq == null) { return; }
+            if (sq.Piece.GetType() == PieceType.None) { return; }
 
             foreach(var square in squares)
             {

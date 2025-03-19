@@ -46,6 +46,8 @@ public static class FENUtils
         ParseFullClockSegment(gameState, fullMoveClock);
         ParseHalfClockSegment(gameState, halfMoveClock);
 
+        gameState.CurrentFen = fen;
+
         return changedSquares;
     }
 

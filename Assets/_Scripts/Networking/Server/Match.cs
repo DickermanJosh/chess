@@ -49,14 +49,21 @@ public class Match
 
         Move move = new Move(from, to, gameState.ColorToMove);
 
+        // Take a snapshop of the previous move's en passant square for use in this move
+        // It will be reset when prompting the move handler
+        string enPassantSquare = gameState.EnPassantSquare;
+
         if (!LegalMovesHandler.IsMoveLegal(gameState, to, from))
         {
             ServerMessageHelper.Log($"{move} deemed illegal by server.");
             return;
         }
 
-        // After confirming that the move is legal, make the move in the match's GameState
-        gameState.Board.ApplyMove(from, to);
+        // After confirming that the move is legal, check to see if En Passant is available 
+        PawnMoveUtils.CheckIfMoveAllowsEnPassant(gameState, move);
+
+        // make the move in the match's GameState
+        gameState.Board.ApplyMove(from, to, enPassantSquare);
         gameState.MoveTracker.AddMove(move);
 
         gameState.UpdateMoveOrder();
@@ -68,4 +75,5 @@ public class Match
         WhitePlayer.Send($"FEN|{newFen}|{move}");
         BlackPlayer.Send($"FEN|{newFen}|{move}");
     }
+
 }

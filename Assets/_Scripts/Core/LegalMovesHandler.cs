@@ -19,7 +19,6 @@ public class LegalMovesHandler : MonoBehaviour
     private static List<Square> _pseudoLegalMoveList;
     private static int _movesInPseudoLegalList;
     private static List<Square> _legalMoveList;
-    private static int _movesInLegalList;
 
     private void Awake()
     {
@@ -52,7 +51,6 @@ public class LegalMovesHandler : MonoBehaviour
     public static Square[] FindLegalMoves(GameState gameState, Square sq)
     {
         _legalMoveList.Clear();
-        _movesInLegalList = 0;
         GameState gameStateCopy = gameState;
 
         Square[] pseudos = FindPseudoLegalMoves(gameStateCopy, sq);
