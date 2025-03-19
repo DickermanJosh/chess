@@ -6,20 +6,17 @@ public class Move
 
     public Square From;
     public Square To;
-    public string Flags;
+    PieceColor Color;
 
-    // public string Notation;
-
-    public Move(Square from, Square to, string flags)
+    public Move(Square from, Square to, PieceColor color)
     {
-        // MadeByWhite = madeByWhite;
         From = from; 
         To = to;
-        Flags = flags;
+        Color = color;
     }
 
     override public string ToString()
     {
-        return From.ToString() + To.ToString();
+        return $"{From.Coord}|{To.Coord}";
     }
 }

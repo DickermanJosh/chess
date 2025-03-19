@@ -52,6 +52,9 @@ public class Player
         // 2. Send the move to the server e.g "MOVE|e2|e4"
         ClientMessageHelper.SendMove(fromSquare, toSquare);
 
+        // TODO: Make this authoritative later somehow
+        GameManager.Instance.GameState.MoveTracker.AddMove(move);
+
         // End move client side to prevent sending multiple messages
         if (GameManager.Instance.MyColor != PieceColor.White)
         {

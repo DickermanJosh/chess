@@ -13,6 +13,7 @@ public class GameState
     public bool BlackQueenSideCastle { get; set; }
     public string EnPassantSquare { get; set; }
     public string CurrentFen { get; set; }
+    public MoveTracker MoveTracker { get; private set; }
 
     public GameState()
     {
@@ -35,6 +36,8 @@ public class GameState
         BlackQueenSideCastle = true;
 
         EnPassantSquare = "-";
+
+        MoveTracker = new MoveTracker();
     }
 
     public void UpdateMoveOrder()

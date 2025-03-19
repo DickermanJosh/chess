@@ -103,13 +103,14 @@ public static class PawnMoveUtils
         if (!LegalMovesHandler.IsSquareValid(neighborIndex)) return;
 
         // Must be a pawn that just moved there
-        var lastMove = MoveTracker.Instance.GetLastMove();
+        Move lastMove = gameState.MoveTracker.GetLastMove();
+
         if (lastMove == null) return;
         if (lastMove.To == null) return;
 
         if (lastMove.To.Index != neighborIndex) return;
         if (LegalMovesHandler.GetPieceType(board, neighborIndex) != PieceType.Pawn) return;
-        if (!WasTheLastMoveADoublePawnPush(board)) return;
+        if (!WasTheLastMoveADoublePawnPush(gameState)) return;
 
         int enPassantIndex = neighborIndex + forwardOffset;
         if (!LegalMovesHandler.IsSquareValid(enPassantIndex)) return;
@@ -121,24 +122,24 @@ public static class PawnMoveUtils
         }
     }
 
-    private static bool WasTheLastMoveADoublePawnPush(Board board)
+    private static bool WasTheLastMoveADoublePawnPush(GameState gameState)
     {
-        var lastMove = MoveTracker.Instance.GetLastMove();
+        Move lastMove = gameState.MoveTracker.GetLastMove();
         if (lastMove == null) return false;
 
         int from = lastMove.From.Index;
         int to = lastMove.To.Index;
 
-        Square toSquare = board.squares[to];
+        Square toSquare = gameState.Board.squares[to];
         if (toSquare.Piece.GetType() != PieceType.Pawn)
             return false;
 
         // White double push => from == to - 15
         // Black double push => from == to + 15
-        if (toSquare.Piece.GetColor() == PieceColor.White && (from == to - 15))
+        if (toSquare.Piece.GetColor() == PieceColor.White && (from == to - 16))
             return true;
 
-        if (toSquare.Piece.GetColor() == PieceColor.Black && (from == to + 15))
+        if (toSquare.Piece.GetColor() == PieceColor.Black && (from == to + 16))
             return true;
 
         return false;

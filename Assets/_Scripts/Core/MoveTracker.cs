@@ -1,23 +1,13 @@
-using NUnit.Framework;
+using System.Collections.Generic;
 using UnityEngine;
 
-public class MoveTracker : MonoBehaviour
+public class MoveTracker
 {
-    public bool isWhiteToMove = true;
+    public List<Move> moves;
 
-    public System.Collections.Generic.List<Move> moves;
-
-    private static MoveTracker _instance;
-    public static MoveTracker Instance => _instance;
-
-    private void Awake()
+    public MoveTracker()
     {
-        if (_instance != null)
-        {
-            Destroy(_instance);
-        }
-
-        _instance = this;
+        moves = new List<Move>();
     }
 
     public void AddMove(Move move)
@@ -29,6 +19,4 @@ public class MoveTracker : MonoBehaviour
     {
         return moves[moves.Count - 1];
     }
-
-
 }

@@ -6,6 +6,7 @@ public class Match
     public RemotePlayerConnection BlackPlayer { get; private set; }
 
     private GameState gameState;
+    public MoveTracker moveTracker;
 
     public Match(RemotePlayerConnection p1, RemotePlayerConnection p2)
     {
@@ -14,6 +15,7 @@ public class Match
 
         // Init server-side gamestate
         gameState = new GameState();
+        moveTracker = new MoveTracker();
 
         // Notify each player, clients will handle setting up a new client-side gamestate
         WhitePlayer.Send(ServerMessageHelper.GetMatchStart(BlackPlayer, PieceColor.White));
@@ -45,10 +47,17 @@ public class Match
             return;
         }
 
-        if (!LegalMovesHandler.IsMoveLegal(gameState, to, from)) { return; }
+        Move move = new Move(from, to, gameState.ColorToMove);
+
+        if (!LegalMovesHandler.IsMoveLegal(gameState, to, from))
+        {
+            ServerMessageHelper.Log($"{move} deemed illegal by server.");
+            return;
+        }
 
         // After confirming that the move is legal, make the move in the match's GameState
         gameState.Board.ApplyMove(from, to);
+        gameState.MoveTracker.AddMove(move);
 
         gameState.UpdateMoveOrder();
 
@@ -56,7 +65,7 @@ public class Match
         string newFen = FENUtils.GenerateFen(gameState);
 
         // Send the message to both clients
-        WhitePlayer.Send($"FEN|{newFen}");
-        BlackPlayer.Send($"FEN|{newFen}");
+        WhitePlayer.Send($"FEN|{newFen}|{move}");
+        BlackPlayer.Send($"FEN|{newFen}|{move}");
     }
 }

@@ -35,13 +35,18 @@ public static class ClientMessageHelper
 
         string[] t = message.Split("|");
         string fen = t[1];
+        string fromString = t[2];
+        string toString = t[3];
         Log($"Extracted FEN: {fen}");
 
-        // GameManager.Instance.GameState.Board.LoadFEN(fen);
-        // BoardManager.Instance.UpdateLocalBoard(fen);
+        Square from = GameManager.Instance.GameState.Board.GetSquareFromNotation(fromString);
+        Square to = GameManager.Instance.GameState.Board.GetSquareFromNotation(toString);
+        PieceColor col = (GameManager.Instance?.MyColor == PieceColor.White) ? PieceColor.Black : PieceColor.White;
+        Move move = new Move(from, to, col);
 
         UnityMainThreadDispatcher.Enqueue(() => 
         {
+            GameManager.Instance.GameState.MoveTracker.AddMove(move);
             GameManager.Instance.UpdateGameStateFromFen(fen);
         });
     }

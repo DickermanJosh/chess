@@ -28,7 +28,7 @@ public class BoardInputManager : MonoBehaviour
             return;
         }
 
-        Move attemptedMove = new Move(selectedSquare, clickedSquare, "");
+        Move attemptedMove = new Move(selectedSquare, clickedSquare, GameManager.Instance.MyColor);
 
         // 2) If we already have a selected piece, try moving it to the clicked square
         // BoardManager.Instance.TryMovePiece(selectedSquare, clickedSquare);
