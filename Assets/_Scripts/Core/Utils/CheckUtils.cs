@@ -37,16 +37,22 @@ public static class CheckUtils
         //   - adapt the logic from “FindSlidingPieceMoves” but in reverse, 
         //     see if we hit an opponent rook/bishop/queen in each direction.
 
-        if (IsAttackedBySliding(board, kingSquare, opponentColor))
+        return IsSquareAttackedByOpponent(board, kingSquare, opponentColor);
+
+    }
+
+    public static bool IsSquareAttackedByOpponent(Board board, Square sq, PieceColor opponentColor)
+    {
+        if (IsAttackedBySliding(board, sq, opponentColor))
             return true;
 
-        if (IsAttackedByKnight(board, kingSquare, opponentColor))
+        if (IsAttackedByKnight(board, sq, opponentColor))
             return true;
 
-        if (IsAttackedByPawn(board, kingSquare, opponentColor))
+        if (IsAttackedByPawn(board, sq, opponentColor))
             return true;
 
-        if (IsAttackedByKing(board, kingSquare, opponentColor))
+        if (IsAttackedByKing(board, sq, opponentColor))
             return true;
 
         return false;

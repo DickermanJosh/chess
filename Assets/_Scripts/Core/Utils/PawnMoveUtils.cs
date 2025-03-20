@@ -173,4 +173,28 @@ public static class PawnMoveUtils
             gameState.EnPassantSquare = EnPassantSquare.Coord.ToString();
         }
     }
+
+    public static void CheckIfMoveWasEnPassant(GameState gameState, Move move, string EnPassantSquare)
+    {
+        Square from = move.From;
+        Square to = move.To;
+        // Check if the move is En Passant, remove the opponent's pawn if it was
+        Debug.Log($"EPSquare: {EnPassantSquare}. To Coord: {to.Coord.ToString()}");
+        if (EnPassantSquare.Equals("-")) { return; }
+        if (!to.Coord.ToString().Equals(EnPassantSquare)) { return; }
+        Debug.Log($"En Passant taken.");
+
+        PieceColor col = from.Piece.GetColor();
+        int index = to.Index;
+
+        // White => -8 to move back behind the pushed En Passant pawn
+        index = (col == PieceColor.White) ? index - 8 : index + 8;
+        // if (col == PieceColor.White) { index -= 8; }
+        // // Black +8 to move back behind the pushed pawn
+        // else { index += 8; }
+
+        Square opponentPawn = gameState.Board.GetSquareFromIndex(index);
+        gameState.Board.RemovePieceFromSquare(opponentPawn);
+        Debug.Log($"Opponent pawn removed at index {index}");
+    }
 }

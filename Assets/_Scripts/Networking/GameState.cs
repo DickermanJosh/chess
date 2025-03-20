@@ -40,6 +40,39 @@ public class GameState
         MoveTracker = new MoveTracker();
     }
 
+    /// <summary>
+    /// Validates if the given move is legal in the current gamestate.
+    /// Updates the gamestates info by checking if the move being made is special in any way.
+    /// (En passant, castling, etc).
+    /// Then, the move is applied to the board
+    /// </summary>
+    public void ValidateUpdateAndAppleMove(Move move)
+    {
+        Square from = move.From;
+        Square to = move.To;
+        string validEnPassant = EnPassantSquare;
+
+        if (!LegalMovesHandler.IsMoveLegal(this, to, from))
+        {
+            ServerMessageHelper.Log($"{move} deemed illegal by server.");
+            return;
+        }
+
+        // Check for any special moves and 
+        PawnMoveUtils.CheckIfMoveAllowsEnPassant(this, move);
+        PawnMoveUtils.CheckIfMoveWasEnPassant(this, move, validEnPassant);
+        KingMoveUtils.CheckIfMoveWasCastle(this, move);
+
+        // make the move in the match's GameState
+        Board.ApplyMove(from, to, validEnPassant);
+        MoveTracker.AddMove(move);
+
+        UpdateMoveOrder();
+
+        string newFen = FENUtils.GenerateFen(this);
+        CurrentFen = newFen;
+    }
+
     public void UpdateMoveOrder()
     {
         HalfMoves++;

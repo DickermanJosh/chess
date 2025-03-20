@@ -68,25 +68,6 @@ namespace Core
 
             UpdatePieceOnSquare(_to, _from.Piece);
             RemovePieceFromSquare(_from); 
-
-            // Check if the move is En Passant, remove the opponent's pawn if it was
-            Debug.Log($"EPSquare: {EnPassantSquare}. To Coord: {To.Coord.ToString()}");
-            if (EnPassantSquare.Equals("-")) { return; }
-            if (!To.Coord.ToString().Equals(EnPassantSquare)) { return; }
-            Debug.Log($"En Passant taken.");
-
-            PieceColor col = _to.Piece.GetColor();
-            int index = _to.Index;
-
-            // White => -8 to move back behind the pushed En Passant pawn
-            index = (col == PieceColor.White) ? index - 8 : index + 8;
-            // if (col == PieceColor.White) { index -= 8; }
-            // // Black +8 to move back behind the pushed pawn
-            // else { index += 8; }
-
-            Square opponentPawn = GetSquareFromIndex(index);
-            RemovePieceFromSquare(opponentPawn);
-            Debug.Log($"Opponent pawn removed at index {index}");
         }
 
         public readonly Square GetSquareFromIndex(int index)
@@ -163,7 +144,7 @@ namespace Core
             Debug.Log($"[Board] Could not find square {sq} in the board");
         }
 
-        private readonly void RemovePieceFromSquare(Square sq)
+        public readonly void RemovePieceFromSquare(Square sq)
         {
             if (sq == null) { return; }
             if (sq.Piece.GetType() == PieceType.None) { return; }

@@ -104,7 +104,7 @@ public class LegalMovesHandler : MonoBehaviour
             case PieceType.Queen:
             case PieceType.Rook:
             case PieceType.Bishop:
-                FindSlidingPieceMoves(board, posInArray, pieceType, color);
+                FindSlidingPieceMoves(gameState, posInArray, pieceType, color);
                 break;
 
             case PieceType.Knight:
@@ -134,8 +134,9 @@ public class LegalMovesHandler : MonoBehaviour
 
     #region Sliding Pieces (Rook, Bishop, Queen)
 
-    private static void FindSlidingPieceMoves(Board board, int posInArray, PieceType pieceType, PieceColor color)
+    private static void FindSlidingPieceMoves(GameState gameState, int posInArray, PieceType pieceType, PieceColor color)
     {
+        Board board = gameState.Board;
         Square startSquare = board.GetSquareFromIndex(posInArray);
 
         int startIndex = 0;
@@ -144,6 +145,8 @@ public class LegalMovesHandler : MonoBehaviour
         switch (pieceType)
         {
             case PieceType.Rook:
+                // If a rook is moved castling rights should be taken from that colors board side
+                RemoveCastlingRightsFromRookIndex(gameState, posInArray);
                 endIndex = 4; // Rook => only first 4 directions (N,S,E,W)
                 break;
             case PieceType.Bishop:
@@ -175,6 +178,30 @@ public class LegalMovesHandler : MonoBehaviour
                 // Not occupied => can move here, keep going
                 AddMove(board, targetIndex);
             }
+        }
+    }
+
+    /// <summary>
+    /// Removes castling rights from the GameState if a rook is moved from its starting index
+    /// </summary>
+    private static void RemoveCastlingRightsFromRookIndex(GameState gameState, int index)
+    {
+        switch (index)
+        {
+            case 0:
+                gameState.WhiteQueenSideCastle = false;
+                break;
+            case 7:
+                gameState.WhiteKingSideCastle = false;
+                break;
+            case 56:
+                gameState.BlackQueenSideCastle = false;
+                break;
+            case 63:
+                gameState.BlackKingSideCastle = false;
+                break;
+            default:
+                break;
         }
     }
 

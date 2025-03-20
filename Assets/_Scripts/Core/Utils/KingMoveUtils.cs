@@ -70,17 +70,24 @@ public static class KingMoveUtils
         int kingStart = 4 + rankOffset;
         int rookStart = 7 + rankOffset;
 
-        // If the 'kingIndex' doesn't match 'kingStart', maybe the king has moved? 
-        // We can do a quick check, or rely on the GameState's castling flags.
+        // Check to make sure the rook is still on its start square
+        Square rookStartSq = board.GetSquareFromIndex(rookStart);
+        if (rookStartSq.Piece.GetType() != PieceType.Rook || rookStartSq.Piece.GetColor() != color) { return; }
+
+        // If the 'kingIndex' doesn't match 'kingStart' the king has moved 
+        if (kingIndex != kingStart) { return; }
 
         // Check squares in between are empty: (kingStart+1) => f-file, (kingStart+2) => g-file
-        if (LegalMovesHandler.IsSquareOccupied(board, kingStart + 1) || LegalMovesHandler.IsSquareOccupied(board, kingStart + 2))
-            return;
+        if (LegalMovesHandler.IsSquareOccupied(board, kingStart + 1) || LegalMovesHandler.IsSquareOccupied(board, kingStart + 2)) { return; }
 
         // Also ensure those squares are not attacked
         // i.e. if IsSquareAttackedByOpponent(board, kingStart+1, OpponentOf(color)) => fail, same for kingStart+2
-        // We'll skip the details, but you can do it similarly to 'IsAttackedBySliding(...)' 
-        // or do a temporary approach.
+        PieceColor opponentColor = (color == PieceColor.White) ? PieceColor.Black : PieceColor.White;
+        Square kingSquarePlus1 = board.GetSquareFromIndex(kingStart + 1);
+        Square kingSquarePlus2 = board.GetSquareFromIndex(kingStart + 2);
+        if (CheckUtils.IsSquareAttackedByOpponent(board, kingSquarePlus1, opponentColor)) { return; }
+        if (CheckUtils.IsSquareAttackedByOpponent(board, kingSquarePlus2, opponentColor)) { return; }
+
 
         // If all good, add the castling move as if "king moves to (kingStart+2)"
         LegalMovesHandler.AddMove(board, kingStart + 2);
@@ -107,6 +114,76 @@ public static class KingMoveUtils
 
         // If all good, add "king moves to (kingStart-2)"
         LegalMovesHandler.AddMove(board, kingStart - 2);
+    }
+
+
+    /// <summary>
+    /// Checks the given move to see if it was a king castling.
+    /// Handled moving the rook and updating castling rights
+    /// </summary>
+    /// <param name="gameState"></param>
+    /// <param name="move"></param>
+    public static void CheckIfMoveWasCastle(GameState gameState, Move move)
+    {
+        Square from = move.From;
+        Square to = move.To;
+
+        if (from.Piece.GetType() != PieceType.King) { return; }
+
+        PieceColor kingColor = from.Piece.GetColor();
+
+        // Kingside castle
+        if (from.Index == to.Index - 2) { CastleRook(gameState, kingColor, true); }
+
+        // Queenside castle
+        if (from.Index == to.Index + 2) { CastleRook(gameState, kingColor, false); }
+    }
+
+    /// <summary>
+    /// Moves the rook into its proper spot when the king castles.
+    /// Meant to be called after confirming the move being made is a castle
+    /// </summary>
+    private static void CastleRook(GameState gameState, PieceColor color, bool kingSide)
+    {
+        Board board = gameState.Board;
+        if (kingSide && color == PieceColor.White)
+        {
+            Square to = board.GetSquareFromIndex(5);
+            Square from = board.GetSquareFromIndex(7);
+            board.ApplyMove(from, to, gameState.EnPassantSquare);
+        }
+        else if (kingSide && color == PieceColor.Black)
+        {
+            Square to = board.GetSquareFromIndex(61);
+            Square from = board.GetSquareFromIndex(63);
+            board.ApplyMove(from, to, gameState.EnPassantSquare);
+        }
+        else if (!kingSide && color == PieceColor.White)
+        {
+            Square to = board.GetSquareFromIndex(3);
+            Square from = board.GetSquareFromIndex(0);
+            board.ApplyMove(from, to, gameState.EnPassantSquare);
+        }
+        else
+        {
+            Square to = board.GetSquareFromIndex(59);
+            Square from = board.GetSquareFromIndex(56);
+            board.ApplyMove(from, to, gameState.EnPassantSquare);
+        }
+
+        gameState.Board = board;
+
+        if (color == PieceColor.White)
+        {
+            gameState.WhiteKingSideCastle = false;
+            gameState.WhiteQueenSideCastle = false;
+        }
+        else
+        {
+            gameState.BlackKingSideCastle = false;
+            gameState.BlackQueenSideCastle = false;
+        }
+
     }
 
 }
