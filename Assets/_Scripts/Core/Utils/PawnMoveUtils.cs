@@ -44,7 +44,7 @@ public static class PawnMoveUtils
                 PawnCaptureCheck(gameState, posInArray, leftOffset, rank, file, color);
                 PawnCaptureCheck(gameState, posInArray, rightOffset, rank, file, color);
                 break;
-            case 0: // TODO: Fix the wraparound pawn bug on the edge files
+            case 0:
                 PawnCaptureCheck(gameState, posInArray, rightOffset, rank, file, color);
                 break;
             case 7:
