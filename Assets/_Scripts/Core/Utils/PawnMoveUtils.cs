@@ -7,8 +7,8 @@ public static class PawnMoveUtils
     {
         Board board = gameState.Board;
         int forwardOffset = (color == PieceColor.Black) ? -8 : 8;
-        int leftOffset = (color == PieceColor.Black) ? -7 : 7;
-        int rightOffset = (color == PieceColor.Black) ? -9 : 9;
+        int leftOffset = (color == PieceColor.Black) ? -9 : 7;
+        int rightOffset = (color == PieceColor.Black) ? -7 : 9;
 
         // If at final rank => promotion logic (stub)
         if (rank == 7 || rank == 0)
@@ -44,7 +44,7 @@ public static class PawnMoveUtils
                 PawnCaptureCheck(gameState, posInArray, leftOffset, rank, file, color);
                 PawnCaptureCheck(gameState, posInArray, rightOffset, rank, file, color);
                 break;
-            case 0:
+            case 0: // TODO: Fix the wraparound pawn bug on the edge files
                 PawnCaptureCheck(gameState, posInArray, rightOffset, rank, file, color);
                 break;
             case 7:
