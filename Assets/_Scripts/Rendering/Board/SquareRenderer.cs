@@ -40,7 +40,7 @@ public class SquareRenderer : MonoBehaviour
 
         transform.position = new Vector3(xPos - 3.5f, yPos - 3.5f, 0);
 
-        spriteRenderer.sortingOrder = 0;
+        spriteRenderer.sortingOrder = 2;
 
         BoxCollider2D collider = gameObject.AddComponent<BoxCollider2D>();
         collider.size = spriteRenderer.bounds.size;

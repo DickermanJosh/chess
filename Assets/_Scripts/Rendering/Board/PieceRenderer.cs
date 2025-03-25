@@ -20,7 +20,7 @@ public class PieceRenderer : MonoBehaviour
 
         gameObject.name = $"Piece_{pieceData.ToString()}";
         transform.position = new Vector3(position.x, position.y, 0);
-        spriteRenderer.sortingOrder = 1;
+        spriteRenderer.sortingOrder = 3;
     }
     
     public void ChangePiece(Piece piece, Sprite pieceSprite)
