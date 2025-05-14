@@ -1,1 +1,1 @@
-Chess bot in C++, UI in Unity
+Networked Chess app being developed in Unity. README coming soon
