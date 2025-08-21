@@ -102,15 +102,25 @@ public static class KingMoveUtils
         int kingStart = 4 + rankOffset;
         int rookStart = 0 + rankOffset;
 
-        // Check squares between the king and rook: (kingStart-1) => d-file, (kingStart-2) => c-file, etc.
-        // Also check they're not attacked, etc.
+        // Check to make sure the rook is still on its start square
+        Square rookStartSq = board.GetSquareFromIndex(rookStart);
+        if (rookStartSq.Piece.GetType() != PieceType.Rook || rookStartSq.Piece.GetColor() != color) { return; }
 
+        // If the 'kingIndex' doesn't match 'kingStart' the king has moved 
+        if (kingIndex != kingStart) { return; }
+
+        // Check squares between the king and rook are empty: d-file, c-file, b-file
         if (LegalMovesHandler.IsSquareOccupied(board, kingStart - 1) 
         || LegalMovesHandler.IsSquareOccupied(board, kingStart - 2) 
         || LegalMovesHandler.IsSquareOccupied(board, kingStart - 3))
             return;
 
-        // Check if squares are attacked, etc.
+        // Check that king's destination and intermediate squares are not attacked
+        PieceColor opponentColor = (color == PieceColor.White) ? PieceColor.Black : PieceColor.White;
+        Square kingSquareMinus1 = board.GetSquareFromIndex(kingStart - 1);
+        Square kingSquareMinus2 = board.GetSquareFromIndex(kingStart - 2);
+        if (CheckUtils.IsSquareAttackedByOpponent(board, kingSquareMinus1, opponentColor)) { return; }
+        if (CheckUtils.IsSquareAttackedByOpponent(board, kingSquareMinus2, opponentColor)) { return; }
 
         // If all good, add "king moves to (kingStart-2)"
         LegalMovesHandler.AddMove(board, kingStart - 2);

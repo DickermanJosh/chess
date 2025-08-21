@@ -10,10 +10,10 @@ public static class PawnMoveUtils
         int leftOffset = (color == PieceColor.Black) ? -9 : 7;
         int rightOffset = (color == PieceColor.Black) ? -7 : 9;
 
-        // If at final rank => promotion logic (stub)
-        if (rank == 7 || rank == 0)
+        // If at promotion rank, generate promotion moves
+        if ((color == PieceColor.White && rank == 7) || (color == PieceColor.Black && rank == 0))
         {
-            Debug.Log("Pawn is on last rank => would be promotion");
+            GeneratePromotionMoves(gameState, posInArray, file, rank, color);
             return;
         }
 
@@ -196,5 +196,54 @@ public static class PawnMoveUtils
         Square opponentPawn = gameState.Board.GetSquareFromIndex(index);
         gameState.Board.RemovePieceFromSquare(opponentPawn);
         Debug.Log($"Opponent pawn removed at index {index}");
+    }
+
+    private static void GeneratePromotionMoves(GameState gameState, int posInArray, int file, int rank, PieceColor color)
+    {
+        Board board = gameState.Board;
+        int forwardOffset = (color == PieceColor.Black) ? -8 : 8;
+        int leftOffset = (color == PieceColor.Black) ? -9 : 7;
+        int rightOffset = (color == PieceColor.Black) ? -7 : 9;
+
+        // Forward promotion (if square is empty)
+        int forwardIndex = posInArray + forwardOffset;
+        if (LegalMovesHandler.IsSquareValid(forwardIndex) && !LegalMovesHandler.IsSquareOccupied(board, forwardIndex))
+        {
+            AddPromotionMoves(board, forwardIndex);
+        }
+
+        // Capture promotions
+        switch (file)
+        {
+            case > 0 and < 7:
+                CheckPromotionCapture(board, posInArray, leftOffset, color);
+                CheckPromotionCapture(board, posInArray, rightOffset, color);
+                break;
+            case 0:
+                CheckPromotionCapture(board, posInArray, rightOffset, color);
+                break;
+            case 7:
+                CheckPromotionCapture(board, posInArray, leftOffset, color);
+                break;
+        }
+    }
+
+    private static void CheckPromotionCapture(Board board, int posInArray, int directionalOffset, PieceColor color)
+    {
+        int targetIndex = posInArray + directionalOffset;
+        if (!LegalMovesHandler.IsSquareValid(targetIndex)) return;
+
+        if (LegalMovesHandler.IsSquareOccupied(board, targetIndex) && LegalMovesHandler.GetPieceColor(board, targetIndex) != color)
+        {
+            AddPromotionMoves(board, targetIndex);
+        }
+    }
+
+    private static void AddPromotionMoves(Board board, int targetIndex)
+    {
+        // For now, we'll just add a single move to the square
+        // In a complete implementation, you'd want to track what piece type the promotion is to
+        // This could be handled by extending the Square class or creating a special PromotionMove class
+        LegalMovesHandler.AddMove(board, targetIndex);
     }
 }

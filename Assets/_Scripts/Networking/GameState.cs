@@ -1,4 +1,5 @@
 using Core;
+using System.Collections.Generic;
 
 public class GameState
 {
@@ -14,6 +15,8 @@ public class GameState
     public string EnPassantSquare { get; set; }
     public string CurrentFen { get; set; }
     public MoveTracker MoveTracker { get; private set; }
+    public int HalfMoveClock { get; set; }
+    public List<string> PositionHistory { get; private set; }
 
     public GameState()
     {
@@ -38,6 +41,8 @@ public class GameState
         EnPassantSquare = "-";
 
         MoveTracker = new MoveTracker();
+        HalfMoveClock = 0;
+        PositionHistory = new List<string>();
     }
 
     /// <summary>
@@ -58,6 +63,22 @@ public class GameState
             return;
         }
 
+        // Track position before move for repetition detection
+        PositionHistory.Add(CurrentFen);
+
+        // Update half-move clock for 50-move rule
+        bool isPawnMove = from.Piece.GetType() == PieceType.Pawn;
+        bool isCapture = to.Piece.GetType() != PieceType.None;
+        
+        if (isPawnMove || isCapture)
+        {
+            HalfMoveClock = 0;
+        }
+        else
+        {
+            HalfMoveClock++;
+        }
+
         // Check for any special moves and 
         PawnMoveUtils.CheckIfMoveAllowsEnPassant(this, move);
         PawnMoveUtils.CheckIfMoveWasEnPassant(this, move, validEnPassant);
@@ -71,6 +92,14 @@ public class GameState
 
         string newFen = FENUtils.GenerateFen(this);
         CurrentFen = newFen;
+
+        // Check if game is over
+        GameStateUtils.GameResult result = GameStateUtils.EvaluateGameState(this);
+        if (result != GameStateUtils.GameResult.InProgress)
+        {
+            IsGameOver = true;
+            ServerMessageHelper.Log($"Game ended: {result}");
+        }
     }
 
     public void UpdateMoveOrder()

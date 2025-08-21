@@ -51,27 +51,26 @@ public class LegalMovesHandler : MonoBehaviour
     public static Square[] FindLegalMoves(GameState gameState, Square sq)
     {
         _legalMoveList.Clear();
-        GameState gameStateCopy = gameState;
 
-        Square[] pseudos = FindPseudoLegalMoves(gameStateCopy, sq);
+        Square[] pseudos = FindPseudoLegalMoves(gameState, sq);
 
-        return pseudos;
-        // if (pseudos.Length == 0) { return pseudos; }
+        if (pseudos.Length == 0) { return pseudos; }
 
+        foreach (var move in pseudos)
+        {
+            Board temp = DeepCloneBoard(gameState.Board);
+            Square tempFromSquare = temp.GetSquareFromIndex(sq.Index);
+            Square tempToSquare = temp.GetSquareFromIndex(move.Index);
+            
+            temp.ApplyMove(tempFromSquare, tempToSquare, gameState.EnPassantSquare);
 
-        // foreach (var move in pseudos)
-        // {
-        //     Board temp = gameStateCopy.Board.Clone();
-        //     temp.ApplyMove(sq, move);
+            if (!CheckUtils.IsKingInCheck(temp, sq.Piece.GetColor()))
+            {
+                _legalMoveList.Add(move);
+            }
+        }
 
-        //     if (!CheckUtils.IsKingInCheck(temp, sq.Piece.GetColor()))
-        //     {
-        //         //_pseudoLegalMoveList.Remove(move);
-        //         _legalMoveList.Add(move);
-        //     }
-        // }
-
-        // return _legalMoveList.ToArray();
+        return _legalMoveList.ToArray();
     }
 
     /// <summary>
@@ -259,5 +258,28 @@ public class LegalMovesHandler : MonoBehaviour
     {
         _pseudoLegalMoveList.Add(board.squares[targetIndex]);
         _movesInPseudoLegalList++;
+    }
+
+    /// <summary>
+    /// Creates a deep copy of the board for legal move validation.
+    /// </summary>
+    private static Board DeepCloneBoard(Board original)
+    {
+        Board copy = new Board(64);
+        copy.squares = new Square[64];
+        
+        for (int i = 0; i < 64; i++)
+        {
+            Square originalSquare = original.squares[i];
+            copy.squares[i] = new Square(
+                originalSquare.Index, 
+                originalSquare.Coord, 
+                originalSquare.AvailableDistancesToEdge, 
+                originalSquare.IsWhite
+            );
+            copy.squares[i].Piece = originalSquare.Piece;
+        }
+        
+        return copy;
     }
 }
