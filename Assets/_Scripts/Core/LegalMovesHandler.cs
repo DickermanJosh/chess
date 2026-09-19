@@ -1,7 +1,6 @@
 using Core;
 using System.Collections.Generic;
 using Unity.VisualScripting;
-using UnityEditor;
 using UnityEngine;
 
 /// <summary>
@@ -16,20 +15,13 @@ public class LegalMovesHandler : MonoBehaviour
     public static LegalMovesHandler Instance => _instance;
 
     // We store temporary pseudo-legal moves here.
-    private static List<Square> _pseudoLegalMoveList;
+    private static readonly List<Square> _pseudoLegalMoveList = new List<Square>();
     private static int _movesInPseudoLegalList;
-    private static List<Square> _legalMoveList;
 
     private void Awake()
     {
         if (_instance == null)
             _instance = this;
-    }
-
-    private void Start()
-    {
-        _pseudoLegalMoveList = new List<Square>();
-        _legalMoveList = new List<Square>();
     }
 
     public static bool IsMoveLegal(GameState gameState, Square to, Square from)
@@ -50,7 +42,8 @@ public class LegalMovesHandler : MonoBehaviour
 
     public static Square[] FindLegalMoves(GameState gameState, Square sq)
     {
-        _legalMoveList.Clear();
+        var legalMoves = new List<Square>();
+        if (sq == null || sq.Piece.GetType() == PieceType.None) return legalMoves.ToArray();
 
         Square[] pseudos = FindPseudoLegalMoves(gameState, sq);
 
@@ -62,15 +55,30 @@ public class LegalMovesHandler : MonoBehaviour
             Square tempFromSquare = temp.GetSquareFromIndex(sq.Index);
             Square tempToSquare = temp.GetSquareFromIndex(move.Index);
             
+            if (tempFromSquare.Piece.GetType() == PieceType.Pawn &&
+                tempToSquare.Piece.GetType() == PieceType.None &&
+                tempToSquare.Coord.ToString() == gameState.EnPassantSquare)
+            {
+                int behind = tempToSquare.Index - (sq.Piece.GetColor() == PieceColor.White ? 8 : -8);
+                temp.RemovePieceFromSquare(temp.squares[behind]);
+            }
+            if (tempFromSquare.Piece.GetType() == PieceType.King &&
+                System.Math.Abs(tempToSquare.Index - tempFromSquare.Index) == 2)
+            {
+                int rank = sq.Piece.GetColor() == PieceColor.White ? 0 : 56;
+                bool kingSide = tempToSquare.Index > tempFromSquare.Index;
+                temp.ApplyMove(temp.squares[rank + (kingSide ? 7 : 0)],
+                    temp.squares[rank + (kingSide ? 5 : 3)], "-");
+            }
             temp.ApplyMove(tempFromSquare, tempToSquare, gameState.EnPassantSquare);
 
             if (!CheckUtils.IsKingInCheck(temp, sq.Piece.GetColor()))
             {
-                _legalMoveList.Add(move);
+                legalMoves.Add(move);
             }
         }
 
-        return _legalMoveList.ToArray();
+        return legalMoves.ToArray();
     }
 
     /// <summary>
@@ -85,8 +93,6 @@ public class LegalMovesHandler : MonoBehaviour
         // Clear from previous usage
         _pseudoLegalMoveList.Clear();
         _movesInPseudoLegalList = 0;
-
-        gameState.EnPassantSquare = "-";
 
         int posInArray = sq.Index;
         Board board = gameState.Board;
@@ -127,7 +133,6 @@ public class LegalMovesHandler : MonoBehaviour
                 break;
         }
 
-        Debug.Log($"[LegalMovesHandler] Found {_movesInPseudoLegalList} pseudo-legal moves for {pieceType} at index {posInArray}.");
         return _pseudoLegalMoveList.ToArray();
     }
 
@@ -144,8 +149,6 @@ public class LegalMovesHandler : MonoBehaviour
         switch (pieceType)
         {
             case PieceType.Rook:
-                // If a rook is moved castling rights should be taken from that colors board side
-                RemoveCastlingRightsFromRookIndex(gameState, posInArray);
                 endIndex = 4; // Rook => only first 4 directions (N,S,E,W)
                 break;
             case PieceType.Bishop:
@@ -177,30 +180,6 @@ public class LegalMovesHandler : MonoBehaviour
                 // Not occupied => can move here, keep going
                 AddMove(board, targetIndex);
             }
-        }
-    }
-
-    /// <summary>
-    /// Removes castling rights from the GameState if a rook is moved from its starting index
-    /// </summary>
-    private static void RemoveCastlingRightsFromRookIndex(GameState gameState, int index)
-    {
-        switch (index)
-        {
-            case 0:
-                gameState.WhiteQueenSideCastle = false;
-                break;
-            case 7:
-                gameState.WhiteKingSideCastle = false;
-                break;
-            case 56:
-                gameState.BlackQueenSideCastle = false;
-                break;
-            case 63:
-                gameState.BlackKingSideCastle = false;
-                break;
-            default:
-                break;
         }
     }
 
@@ -256,6 +235,7 @@ public class LegalMovesHandler : MonoBehaviour
     /// </summary>
     public static void AddMove(Board board, int targetIndex)
     {
+        if (board.squares[targetIndex].Piece.GetType() == PieceType.King) return;
         _pseudoLegalMoveList.Add(board.squares[targetIndex]);
         _movesInPseudoLegalList++;
     }

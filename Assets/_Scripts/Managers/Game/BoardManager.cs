@@ -1,6 +1,7 @@
 using Render;
 using Core;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using System.Collections.Generic;
 
 namespace Managers
@@ -22,11 +23,13 @@ namespace Managers
 
             _instance = this;
 
-            BoardRenderer.Instance.RenderBoardSquares(GameManager.Instance.GameState.Board);
         }
 
         private void Start()
         {
+            if (Camera.main != null && Camera.main.GetComponent<Physics2DRaycaster>() == null)
+                Camera.main.gameObject.AddComponent<Physics2DRaycaster>();
+            BoardRenderer.Instance.RenderBoardSquares(GameManager.Instance.GameState.Board);
             if (GameManager.Instance.MyColor == PieceColor.Black)
             {
                 BoardRenderer.Instance.FlipPerspective(GameManager.Instance.GameState.Board);

@@ -17,6 +17,8 @@ public class Player
     /// <returns> 0 - Move sent to server. -1 - Move not legal. -2 - Wrong color to move or piece color selected </returns>
     public int OnMove(Move move)
     {
+        if (GameManager.Instance.IsEngineGame)
+            return OperaGameController.Instance.TryHumanMove(move) ? 0 : -1;
         // todo: check if it is the players turn
         // todo: maybe validate move here, even though it will likely already be validated.
         Square toSquare = move.To;

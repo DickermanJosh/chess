@@ -17,14 +17,7 @@ public class SquareRenderer : MonoBehaviour
     {
         this.squareData = squareData;
         this.DefaultColor = squareColor;
-        if (squareData.IsWhite) 
-        {
-            HighlightColor = new Color(DefaultColor.r, DefaultColor.g, DefaultColor.b - 50);
-        }
-        else
-        {
-            HighlightColor = new Color(DefaultColor.r + 12, DefaultColor.g + 12, DefaultColor.b);
-        }
+        HighlightColor = Color.Lerp(DefaultColor, new Color(0.95f, 0.78f, 0.25f), 0.65f);
         spriteRenderer = GetComponent<SpriteRenderer>();
         spriteRenderer.sprite = defaultSquareSprite;
         spriteRenderer.color = DefaultColor;

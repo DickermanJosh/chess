@@ -1,23 +1,14 @@
 using UnityEngine;
-using Core;
+using UnityEngine.EventSystems;
 
 [RequireComponent(typeof(SquareRenderer))]
-public class SquareClickHandler : MonoBehaviour
+public class SquareClickHandler : MonoBehaviour, IPointerClickHandler
 {
-    private Square squareData;
-
-    private void Start()
+    // Use the same Input System / EventSystem path as the menus. Graphic UI
+    // raycasts take priority, so a promotion or menu click cannot move a piece.
+    public void OnPointerClick(PointerEventData eventData)
     {
-        // We can fetch the SquareRenderer and see which Square it references
-        var renderer = GetComponent<SquareRenderer>();
-        squareData = renderer.squareData;
-    }
-
-    private void OnMouseDown()
-    {
-        // Unity calls this if the user clicks on this object’s collider
-        // Pass the event to BoardInputManager
-        BoardInputManager.Instance.OnSquareClicked(squareData);
-        Debug.Log("Square clicked.");
+        if (eventData.button != PointerEventData.InputButton.Left) return;
+        BoardInputManager.Instance?.OnSquareClicked(GetComponent<SquareRenderer>().squareData);
     }
 }

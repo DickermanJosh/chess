@@ -12,6 +12,7 @@ public class GameManager : MonoBehaviour
     private Player blackPlayer;
     public string OpponentName { get; set; }
     public PieceColor MyColor { get; private set; }
+    public bool IsEngineGame { get; private set; }
 
     private static GameManager _instance;
     public static GameManager Instance => _instance;
@@ -31,6 +32,7 @@ public class GameManager : MonoBehaviour
 
     public void StartOnlineGame(PieceColor myColor)
     {
+        IsEngineGame = false;
         MyColor = myColor;
         GameState = new GameState();
 
@@ -59,8 +61,20 @@ public class GameManager : MonoBehaviour
 
     public bool IsMyTurn()
     {
-        return MyColor == GameState.ColorToMove;
+        return GameState != null && !GameState.IsGameOver && MyColor == GameState.ColorToMove;
     }
+
+    public void StartEngineGame(PieceColor color)
+    {
+        IsEngineGame = true;
+        MyColor = color;
+        OpponentName = "Opera";
+        GameState = new GameState();
+        whitePlayer = new Player(PieceColor.White);
+        blackPlayer = new Player(PieceColor.Black);
+    }
+
+    public void NotifyStateUpdated() => StateUpdated?.Invoke();
 
     public Player GetMyPlayer()
     {
@@ -75,6 +89,7 @@ public class GameManager : MonoBehaviour
     public void ResetToDefault()
 {
     GameState = null;
+    IsEngineGame = false;
     OpponentName = "";
     MyColor = PieceColor.None;
 

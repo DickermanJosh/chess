@@ -26,6 +26,8 @@ public class MainMenuManager : MonoBehaviour
     {
         onlineGameButton.onClick.AddListener(OnConnectClicked);
         aiGameButton.onClick.AddListener(OnAIGameClicked);
+        var aiLabel = aiGameButton.GetComponentInChildren<TMP_Text>();
+        if (aiLabel != null) aiLabel.text = "Play Opera";
         localGameButton.onClick.AddListener(OnLocalGameClicked);
         quitButton.onClick.AddListener(OnQuitClicked);
         submitButton.onClick.AddListener(OnSubmitClicked);
@@ -46,7 +48,7 @@ public class MainMenuManager : MonoBehaviour
 
     private void OnAIGameClicked()
     {
-
+        SceneLoader.Instance.LoadScene(SceneLoader.AIGame);
     }
 
     private void OnLocalGameClicked()

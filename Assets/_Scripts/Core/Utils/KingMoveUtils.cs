@@ -64,6 +64,7 @@ public static class KingMoveUtils
     private static void AttemptKingSideCastle(GameState gameState, int kingIndex, PieceColor color)
     {
         Board board = gameState.Board;
+        if (CheckUtils.IsKingInCheck(board, color)) return;
         // For White: king starts e1 => index=4, rook is h1 => index=7
         // For Black: king e8 => index=60, rook h8 => index=63
         int rankOffset = (color == PieceColor.White) ? 0 : 56;
@@ -96,6 +97,7 @@ public static class KingMoveUtils
     private static void AttemptQueenSideCastle(GameState gameState, int kingIndex, PieceColor color)
     {
         Board board = gameState.Board;
+        if (CheckUtils.IsKingInCheck(board, color)) return;
         // For White: king e1 => index=4, rook a1 => index=0
         // For Black: king e8 => index=60, rook a8 => index=56
         int rankOffset = (color == PieceColor.White) ? 0 : 56;

@@ -186,3 +186,9 @@ $RECYCLE.BIN/
 # VS Code
 .vsconfig
 .vscode/
+
+# Native Opera builds are installed by the engine packaging script.
+/Assets/StreamingAssets/Opera/*-arm64/
+/Assets/StreamingAssets/Opera/*-x86_64/
+/Assets/StreamingAssets/Opera/*-arm64.meta
+/Assets/StreamingAssets/Opera/*-x86_64.meta

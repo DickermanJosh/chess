@@ -127,15 +127,12 @@ public static class GameStateUtils
 
     private static bool IsFiftyMoveRule(GameState gameState)
     {
-        return gameState.HalfMoveClock >= 50;
+        return gameState.HalfMoveClock >= 100;
     }
 
     private static bool IsThreefoldRepetition(GameState gameState)
     {
-        if (gameState.PositionHistory.Count < 6) // Need at least 3 occurrences
-            return false;
-
-        string currentPosition = gameState.CurrentFen;
+        string currentPosition = PositionKey(gameState);
         int occurrences = 1; // Current position counts as 1
 
         foreach (string position in gameState.PositionHistory)
@@ -149,5 +146,26 @@ public static class GameStateUtils
         }
 
         return false;
+    }
+
+    public static string PositionKey(GameState state)
+    {
+        string[] fields = state.CurrentFen.Split(' ');
+        string ep = "-";
+        if (state.EnPassantSquare != "-")
+        {
+            Square target = state.Board.GetSquareFromNotation(state.EnPassantSquare);
+            foreach (Square square in state.Board.squares)
+            {
+                if (square.Piece.GetColor() == state.ColorToMove && square.Piece.GetType() == PieceType.Pawn &&
+                    System.Math.Abs(square.Coord.file - target.Coord.file) == 1 &&
+                    LegalMovesHandler.IsMoveLegal(state, target, square))
+                {
+                    ep = state.EnPassantSquare;
+                    break;
+                }
+            }
+        }
+        return $"{fields[0]} {fields[1]} {fields[2]} {ep}";
     }
 }

@@ -21,6 +21,9 @@ public class BoardInputManager : MonoBehaviour
 
     public void OnSquareClicked(Square clickedSquare)
     {
+        if (clickedSquare == null || GameManager.Instance == null || !GameManager.Instance.IsMyTurn()) return;
+        if (GameManager.Instance.IsEngineGame &&
+            (OperaGameController.Instance == null || !OperaGameController.Instance.CanHumanMove)) return;
         // 1) If no piece is currently selected, try selecting the piece on that square
         if (selectedSquare == null)
         {
@@ -38,7 +41,7 @@ public class BoardInputManager : MonoBehaviour
         // If the result is -1 that means the move was not legal.
         // Calling OnSquareClicked again with the newly last clicked square will reselct that square if it has
         // the correct color piece on it
-        if (result == -1)
+        if (result < 0)
         {
             UnselectSquare();
             OnSquareClicked(clickedSquare);
@@ -80,11 +83,12 @@ public class BoardInputManager : MonoBehaviour
     public void UnselectSquare()
     {
         selectedSquare = null;
+        if (GameManager.Instance == null || GameManager.Instance.GameState == null) return;
         // SquareHighlightManager.Instance.ClearAllHighlights();
         var board = GameManager.Instance.GameState.Board;
         foreach (Square sq in board.squares)
         {
-            sq.Renderer.RemoveHighlight();
+            sq.Renderer?.RemoveHighlight();
         }
     }
 }

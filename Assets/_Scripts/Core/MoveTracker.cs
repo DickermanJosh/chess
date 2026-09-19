@@ -17,6 +17,6 @@ public class MoveTracker
 
     public Move GetLastMove()
     {
-        return moves[moves.Count - 1];
+        return moves.Count == 0 ? null : moves[moves.Count - 1];
     }
 }

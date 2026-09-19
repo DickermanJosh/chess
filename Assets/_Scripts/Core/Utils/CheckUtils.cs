@@ -159,7 +159,8 @@ public static class CheckUtils
         int kingIndex = kingSquare.Index;
         bool isWhiteOpponent = (opponentColor == PieceColor.White);
 
-        int[] possiblePawnOffsets = isWhiteOpponent ? new int[] { 7, 9 } : new int[] { -7, -9 };
+        // Search backwards from the attacked square to the attacking pawn.
+        int[] possiblePawnOffsets = isWhiteOpponent ? new int[] { -7, -9 } : new int[] { 7, 9 };
 
         foreach (int offset in possiblePawnOffsets)
         {
@@ -193,7 +194,7 @@ public static class CheckUtils
             int targetIndex = kingIndex + offset;
             if (targetIndex < 0 || targetIndex >= 64)
                 continue;
-            if (Mathf.Abs((kingIndex % 8) - (targetIndex % 8)) > 2)
+            if (Mathf.Abs((kingIndex % 8) - (targetIndex % 8)) > 1)
                 continue;
             // for a king offset, the file difference can never exceed 1
 

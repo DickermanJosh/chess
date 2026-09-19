@@ -65,6 +65,14 @@ namespace Render
                 return;
             }
 
+            foreach (Transform child in transform)
+            {
+                child.gameObject.SetActive(false);
+                Destroy(child.gameObject);
+            }
+            pieceRenderers.Clear();
+            transform.rotation = Quaternion.identity;
+
             foreach (Square square in board.squares)
             {
                 CreateSquareAndPieceRenderer(square);
@@ -93,7 +101,6 @@ namespace Render
                 Debug.LogError("BoardRenderer: The board data is not initialized.");
                 return;
             }
-;
             PieceRenderer renderer = GetRendererFromIndex(square.Index);
 
             renderer.ChangePiece(square.Piece, GetPieceSprite(square.Piece));

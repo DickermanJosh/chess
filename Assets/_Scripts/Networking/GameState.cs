@@ -1,4 +1,5 @@
 using Core;
+using System;
 using System.Collections.Generic;
 
 public class GameState
@@ -16,108 +17,85 @@ public class GameState
     public string CurrentFen { get; set; }
     public MoveTracker MoveTracker { get; private set; }
     public int HalfMoveClock { get; set; }
+    // Canonical position keys, without clocks and without uncapturable EP targets.
     public List<string> PositionHistory { get; private set; }
+    public GameStateUtils.GameResult Result { get; private set; }
 
     public GameState()
     {
         Board = new Board(64);
         Board.Init();
-
         Board.LoadPiecesFromFen(FENUtils.StartFen);
         CurrentFen = FENUtils.StartFen;
-
         ColorToMove = PieceColor.White;
-
-        IsGameOver = false;
-
-        HalfMoves = 1;
-        FullMoves = 0;
-
-        WhiteKingSideCastle = true;
-        WhiteQueenSideCastle = true;
-        BlackKingSideCastle = true;
-        BlackQueenSideCastle = true;
-
+        FullMoves = 1;
+        WhiteKingSideCastle = WhiteQueenSideCastle = true;
+        BlackKingSideCastle = BlackQueenSideCastle = true;
         EnPassantSquare = "-";
-
         MoveTracker = new MoveTracker();
-        HalfMoveClock = 0;
         PositionHistory = new List<string>();
     }
 
-    /// <summary>
-    /// Validates if the given move is legal in the current gamestate.
-    /// Updates the gamestates info by checking if the move being made is special in any way.
-    /// (En passant, castling, etc).
-    /// Then, the move is applied to the board
-    /// </summary>
-    public void ValidateUpdateAndAppleMove(Move move)
+    // Preserve the existing server entrypoint while sharing the same local rules.
+    public void ValidateUpdateAndAppleMove(Move move) => TryApplyMove(move);
+
+    public bool TryApplyMove(Move move)
     {
-        Square from = move.From;
-        Square to = move.To;
-        string validEnPassant = EnPassantSquare;
+        if (IsGameOver || move?.From == null || move.To == null || move.From == move.To) return false;
+        Square from = Board.GetSquareFromIndex(move.From.Index);
+        Square to = Board.GetSquareFromIndex(move.To.Index);
+        if (from == null || to == null || from.Piece.GetColor() != ColorToMove ||
+            !LegalMovesHandler.IsMoveLegal(this, to, from)) return false;
+        move.From = from;
+        move.To = to;
+        bool pawn = from.Piece.GetType() == PieceType.Pawn;
+        bool promotion = pawn && (to.Coord.rank == 0 || to.Coord.rank == 7);
+        if (promotion && move.Promotion == PieceType.None) move.Promotion = PieceType.Queen;
+        if (promotion ? !IsPromotionPiece(move.Promotion) : move.Promotion != PieceType.None) return false;
 
-        if (!LegalMovesHandler.IsMoveLegal(this, to, from))
+        PositionHistory.Add(GameStateUtils.PositionKey(this));
+        bool capture = to.Piece.GetType() != PieceType.None;
+        HalfMoveClock = pawn || capture ? 0 : HalfMoveClock + 1;
+        string ep = EnPassantSquare;
+        PieceColor color = ColorToMove;
+        if (from.Piece.GetType() == PieceType.King)
         {
-            ServerMessageHelper.Log($"{move} deemed illegal by server.");
-            return;
+            if (color == PieceColor.White) WhiteKingSideCastle = WhiteQueenSideCastle = false;
+            else BlackKingSideCastle = BlackQueenSideCastle = false;
         }
-
-        // Track position before move for repetition detection
-        PositionHistory.Add(CurrentFen);
-
-        // Update half-move clock for 50-move rule
-        bool isPawnMove = from.Piece.GetType() == PieceType.Pawn;
-        bool isCapture = to.Piece.GetType() != PieceType.None;
-        
-        if (isPawnMove || isCapture)
-        {
-            HalfMoveClock = 0;
-        }
-        else
-        {
-            HalfMoveClock++;
-        }
-
-        // Check for any special moves and 
+        if (from.Piece.GetType() == PieceType.Rook) RemoveRookRight(from.Index);
+        if (to.Piece.GetType() == PieceType.Rook) RemoveRookRight(to.Index);
         PawnMoveUtils.CheckIfMoveAllowsEnPassant(this, move);
-        PawnMoveUtils.CheckIfMoveWasEnPassant(this, move, validEnPassant);
+        PawnMoveUtils.CheckIfMoveWasEnPassant(this, move, ep);
         KingMoveUtils.CheckIfMoveWasCastle(this, move);
-
-        // make the move in the match's GameState
-        Board.ApplyMove(from, to, validEnPassant);
+        Board.ApplyMove(from, to, ep);
+        if (promotion) to.Piece = new Piece(move.Promotion, color);
         MoveTracker.AddMove(move);
-
         UpdateMoveOrder();
+        CurrentFen = FENUtils.GenerateFen(this);
+        Result = GameStateUtils.EvaluateGameState(this);
+        IsGameOver = Result != GameStateUtils.GameResult.InProgress;
+        return true;
+    }
 
-        string newFen = FENUtils.GenerateFen(this);
-        CurrentFen = newFen;
+    private static bool IsPromotionPiece(PieceType p) => p == PieceType.Queen || p == PieceType.Rook ||
+        p == PieceType.Bishop || p == PieceType.Knight;
 
-        // Check if game is over
-        GameStateUtils.GameResult result = GameStateUtils.EvaluateGameState(this);
-        if (result != GameStateUtils.GameResult.InProgress)
+    private void RemoveRookRight(int index)
+    {
+        switch (index)
         {
-            IsGameOver = true;
-            ServerMessageHelper.Log($"Game ended: {result}");
+            case 0: WhiteQueenSideCastle = false; break;
+            case 7: WhiteKingSideCastle = false; break;
+            case 56: BlackQueenSideCastle = false; break;
+            case 63: BlackKingSideCastle = false; break;
         }
     }
 
     public void UpdateMoveOrder()
     {
         HalfMoves++;
-
-        if (HalfMoves % 2 == 0)
-        {
-            FullMoves++;
-        }
-
-        if (ColorToMove == PieceColor.White)
-        {
-            ColorToMove = PieceColor.Black;
-        }
-        else
-        {
-            ColorToMove = PieceColor.White;
-        }
+        if (ColorToMove == PieceColor.Black) FullMoves++;
+        ColorToMove = ColorToMove == PieceColor.White ? PieceColor.Black : PieceColor.White;
     }
 }

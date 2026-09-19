@@ -36,8 +36,8 @@ public static class FENUtils
         string colorToMove = segments[1];
         string castlingRights = segments[2];
         string enPassantSquare = segments[3];
-        string fullMoveClock = segments[4];
-        string halfMoveClock = segments[5];
+        string halfMoveClock = segments[4];
+        string fullMoveClock = segments[5];
 
         List<int> changedSquares = ParsePiecePlacementSegment(piecePlacement, gameState.Board);
         ParseColorToMoveSegment(gameState, colorToMove);
@@ -45,6 +45,7 @@ public static class FENUtils
         ParseEnPassantSquareSegment(gameState, enPassantSquare);
         ParseFullClockSegment(gameState, fullMoveClock);
         ParseHalfClockSegment(gameState, halfMoveClock);
+        gameState.HalfMoves = (gameState.FullMoves - 1) * 2 + (gameState.ColorToMove == PieceColor.Black ? 1 : 0);
 
         gameState.CurrentFen = fen;
 
@@ -167,7 +168,7 @@ public static class FENUtils
     private static void ParseHalfClockSegment(GameState gameState, string fenSegment)
     {
         Int32.TryParse(fenSegment, out int x);
-        gameState.HalfMoves = x;
+        gameState.HalfMoveClock = x;
     }
     private static void ParseFullClockSegment(GameState gameState, string fenSegment)
     {
@@ -201,7 +202,7 @@ public static class FENUtils
             enPassant = "-";
 
         // 5) Halfmove clock (aka "move50" in some references)
-        int halfMoveClock = gameState.HalfMoves;
+        int halfMoveClock = gameState.HalfMoveClock;
 
         // 6) Fullmove number
         int fullMoveNumber = gameState.FullMoves;
