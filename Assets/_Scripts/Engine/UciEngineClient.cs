@@ -55,7 +55,8 @@ namespace Opera
             }
         }
 
-        public async Task<string> GetMoveAsync(IReadOnlyList<string> moves, int milliseconds, CancellationToken cancellation)
+        public async Task<string> GetMoveAsync(IReadOnlyList<string> moves, int milliseconds, CancellationToken cancellation,
+            Action<UciSearchInfo> onInfo = null, IReadOnlyList<string> searchMoves = null)
         {
             if (milliseconds < 1 || milliseconds > 30000) throw new ArgumentOutOfRangeException(nameof(milliseconds));
             var position = new StringBuilder("position startpos");
@@ -66,6 +67,15 @@ namespace Opera
                 position.Append(' ').Append(move);
             }
             if (position.Length > 4096) throw new InvalidOperationException("Game history exceeds the engine's command limit.");
+            string go = "go movetime " + milliseconds;
+            if (searchMoves != null)
+            {
+                if (searchMoves.Count == 0) throw new ArgumentException("A restricted search needs at least one legal move.");
+                foreach (string move in searchMoves)
+                    if (!IsCoordinateMove(move)) throw new FormatException("Invalid candidate: " + move);
+                go += " searchmoves " + string.Join(" ", searchMoves);
+                if (go.Length > 4096) throw new InvalidOperationException("Candidate list exceeds the command limit.");
+            }
             using (var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellation, lifetime.Token))
             {
                 await commandGate.WaitAsync(linked.Token).ConfigureAwait(false);
@@ -74,8 +84,8 @@ namespace Opera
                     Send(position.ToString());
                     Send("isready");
                     await UntilAsync("readyok", 5000, linked.Token).ConfigureAwait(false);
-                    Send("go movetime " + milliseconds);
-                    string response = await UntilAsync("bestmove ", milliseconds + 5000, linked.Token).ConfigureAwait(false);
+                    Send(go);
+                    string response = await UntilAsync("bestmove ", milliseconds + 5000, linked.Token, onInfo).ConfigureAwait(false);
                     string move = response.Split(' ')[1];
                     if (move == "0000" || move == "(none)") return null;
                     if (!IsCoordinateMove(move)) throw new InvalidDataException("Invalid engine bestmove: " + response);
@@ -103,7 +113,7 @@ namespace Opera
             process.StandardInput.WriteLine(command);
         }
 
-        private async Task<string> UntilAsync(string prefix, int milliseconds, CancellationToken cancellation)
+        private async Task<string> UntilAsync(string prefix, int milliseconds, CancellationToken cancellation, Action<UciSearchInfo> onInfo = null)
         {
             var clock = Stopwatch.StartNew();
             while (true)
@@ -118,6 +128,11 @@ namespace Opera
                 if (line.StartsWith("info string ERROR", StringComparison.Ordinal))
                     throw new InvalidDataException(line);
                 if (line.StartsWith("id name ", StringComparison.Ordinal)) EngineName = line.Substring(8);
+                if (onInfo != null)
+                {
+                    var info = UciSearchInfo.Parse(line);
+                    if (info != null) onInfo(info); // May run off the main thread; callers marshal UI work.
+                }
                 if (line.StartsWith(prefix, StringComparison.Ordinal)) return line;
             }
         }

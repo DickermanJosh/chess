@@ -35,6 +35,7 @@ public static class OperaIntegrationTools
     public static void Validate()
     {
         OperaRulesChecks.Run();
+        OperaReviewChecks.Run();
         CheckClient();
         Debug.Log("[Opera checks] All integration checks passed.");
     }
@@ -52,6 +53,18 @@ public static class OperaIntegrationTools
                 if (response == null || !state.TryApplyMove(Move.FromUci(state, response)))
                     throw new Exception("UCI response did not apply to the Unity board: " + response);
             }
+            var position = new GameState();
+            position.TryApplyMove(Move.FromUci(position, "e2e4"));
+            UciSearchInfo info = null;
+            string first = client.GetMoveAsync(new[] { "e2e4" }, 150, CancellationToken.None,
+                update => info = update).GetAwaiter().GetResult();
+            if (info == null || !info.HasScore || info.Pv.Length == 0 || info.Pv[0] != first)
+                throw new Exception("Live analysis did not provide a scored principal variation.");
+            var remaining = ChessNotation.LegalUciMoves(position).Where(move => move != first).ToArray();
+            string alternative = client.GetMoveAsync(new[] { "e2e4" }, 150, CancellationToken.None,
+                update => info = update, remaining).GetAwaiter().GetResult();
+            if (!remaining.Contains(alternative) || info.Pv[0] != alternative)
+                throw new Exception("Candidate exclusion did not search an alternative legal move.");
             int pid = client.ProcessId;
             using (var cancellation = new CancellationTokenSource(100))
             {
@@ -84,6 +97,8 @@ public static class OperaIntegrationTools
         }
         catch (ArgumentException) { } // Already reaped.
     }
+
+    public static void ValidateAndBuildMac() { Validate(); BuildMac(); }
 
     [MenuItem("Opera/Build macOS ARM64 playtest")]
     public static void BuildMac()

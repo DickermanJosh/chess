@@ -88,7 +88,9 @@ public class BoardInputManager : MonoBehaviour
         var board = GameManager.Instance.GameState.Board;
         foreach (Square sq in board.squares)
         {
-            sq.Renderer?.RemoveHighlight();
+            // A reviewed board has its own renderers; the live board may still
+            // reference Unity objects destroyed during the previous redraw.
+            if (sq.Renderer != null) sq.Renderer.RemoveHighlight();
         }
     }
 }

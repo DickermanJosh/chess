@@ -1,15 +1,17 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Core;
 using Opera;
 using Render;
-using TMPro;
 using UnityEngine;
-using UnityEngine.Events;
+using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
-using UnityEngine.UI;
 
 [DefaultExecutionOrder(-200)]
 public class OperaGameController : MonoBehaviour
@@ -18,299 +20,352 @@ public class OperaGameController : MonoBehaviour
     public bool Ready { get; private set; }
     public bool Thinking { get; private set; }
     public string Status { get; private set; } = "Starting Opera…";
-    public bool CanHumanMove => Ready && !Thinking && pendingPromotion == null && GameManager.Instance.IsMyTurn();
-    public GameState State => GameManager.Instance.GameState;
-
-    private UciEngineClient engine;
-    private CancellationTokenSource session;
-    private int thinkMilliseconds = 1000;
+    public bool CanHumanMove => Ready && !Thinking && !Reviewing && pendingPromotion == null && GameManager.Instance.IsMyTurn();
+    public GameState State => record.Live;
+    public bool Reviewing => viewedPly != record.Plies.Count;
+    public int ViewedPly => viewedPly;
+    public OperaGameRecord Record => record;
+    public bool ShowAnalysis { get; private set; } = true;
+    private OperaGameRecord record;
+    private UciEngineClient engine, analysisEngine;
+    private CancellationTokenSource session, analysisSession;
+    private readonly ConcurrentQueue<Action> uiUpdates = new ConcurrentQueue<Action>();
+    private int thinkMilliseconds = 1000, viewedPly, analysisGeneration;
     private Move pendingPromotion;
-    private TextMeshProUGUI statusText;
-    private TextMeshProUGUI lastMoveText;
-    private TextMeshProUGUI thinkingTimeText;
-    private GameObject promotionPanel;
+    private OperaPlayPanel panel;
+    private UciSearchInfo lastAnalysis;
+    private Square[] renderedSquares;
+    private string exportsDirectory;
 
+    [Serializable] private class EngineMetadata { public string packaged_from_checkout; public string sha256; }
     private void Awake()
     {
         Instance = this;
         if (GameManager.Instance == null) new GameObject("Game Manager").AddComponent<GameManager>();
         GameManager.Instance.StartEngineGame(PieceColor.White);
+        CreateRecord(PieceColor.White);
     }
-
     private async void Start()
     {
-        BuildControls();
-        if (Camera.main != null)
-        {
-            Camera.main.rect = new Rect(0, 0, 0.72f, 1);
-            Camera.main.orthographicSize = 4.7f;
-        }
-        // Allow the board's Start to finish before accepting engine or human moves.
+        panel = new OperaPlayPanel(transform, this);
         await Task.Yield();
-        if (this != null) await StartEngineAsync();
-    }
-
-    public async Task NewGameAsync(PieceColor color)
-    {
-        StopSession();
-        BoardInputManager.Instance?.UnselectSquare();
-        GameManager.Instance.StartEngineGame(color);
-        BoardRenderer.Instance.RenderBoardSquares(State.Board);
-        if (color == PieceColor.Black) BoardRenderer.Instance.FlipPerspective(State.Board);
-        pendingPromotion = null;
-        promotionPanel?.SetActive(false);
-        if (lastMoveText != null) lastMoveText.text = "Click a piece to see its legal moves.";
+        if (this == null) return;
+        DrawPosition();
         await StartEngineAsync();
     }
-
+    private void Update()
+    {
+        while (uiUpdates.TryDequeue(out Action update)) update();
+        panel?.Resize();
+        var keyboard = Keyboard.current;
+        if (keyboard == null || pendingPromotion != null || panel == null) return;
+        if (keyboard.leftArrowKey.wasPressedThisFrame) ViewPly(viewedPly - 1);
+        if (keyboard.rightArrowKey.wasPressedThisFrame) ViewPly(viewedPly + 1);
+        if (keyboard.homeKey.wasPressedThisFrame) ViewPly(0);
+        if (keyboard.endKey.wasPressedThisFrame) ViewPly(record.Plies.Count);
+    }
+    private void CreateRecord(PieceColor color)
+    {
+        record = new OperaGameRecord(color) { MoveMilliseconds = thinkMilliseconds };
+        GameManager.Instance.GameState = record.Live;
+        viewedPly = 0;
+        try
+        {
+            string path = Path.Combine(Path.GetDirectoryName(OperaEngineLocator.FindExecutable()), "engine.json");
+            if (File.Exists(path))
+            {
+                var metadata = JsonUtility.FromJson<EngineMetadata>(File.ReadAllText(path));
+                record.EngineRevision = metadata.packaged_from_checkout;
+                record.EngineHash = metadata.sha256;
+            }
+        }
+        catch (Exception error) { Debug.LogWarning("[Opera] Engine version metadata: " + error.Message); }
+    }
+    public async Task NewGameAsync(PieceColor color)
+    {
+        if (!ArchiveBeforeReplacing()) return;
+        StopAll();
+        BoardInputManager.Instance?.UnselectSquare();
+        GameManager.Instance.StartEngineGame(color);
+        CreateRecord(color);
+        pendingPromotion = null; panel.ShowPromotion(false);
+        DrawPosition();
+        await StartEngineAsync();
+    }
+    public async Task ResumeHereAsync()
+    {
+        if (!Reviewing || !ArchiveBeforeReplacing()) return;
+        StopAll();
+        BoardInputManager.Instance?.UnselectSquare();
+        record.ResumeAt(viewedPly);
+        GameManager.Instance.GameState = record.Live;
+        pendingPromotion = null; panel.ShowPromotion(false);
+        DrawPosition();
+        panel.Notice("Original game saved. Continuing from this position.");
+        await StartEngineAsync();
+    }
     private async Task StartEngineAsync()
     {
-        Ready = false;
-        SetStatus("Starting Opera…");
+        Ready = false; SetStatus("Starting Opera…");
         session = new CancellationTokenSource();
         var cancellation = session.Token;
-        var client = new UciEngineClient();
-        engine = client;
+        var client = new UciEngineClient(); engine = client;
         try
         {
             await client.StartAsync(OperaEngineLocator.FindExecutable(), cancellation);
             if (cancellation.IsCancellationRequested || engine != client) return;
-            Ready = true;
-            RefreshStatus();
+            record.EngineName = client.EngineName;
+            Ready = true; RefreshStatus(); RestartAnalysis();
             await MoveForEngineAsync();
         }
         catch (OperationCanceledException) { }
-        catch (Exception error)
-        {
-            if (!cancellation.IsCancellationRequested && engine == client) ReportError(error);
-        }
+        catch (Exception error) { if (!cancellation.IsCancellationRequested && engine == client) ReportError(error); }
     }
-
     public bool TryHumanMove(Move move)
     {
-        if (!CanHumanMove || move.From.Piece.GetColor() != GameManager.Instance.MyColor ||
-            !LegalMovesHandler.IsMoveLegal(State, move.To, move.From)) return false;
+        if (!CanHumanMove || move.From.Piece.GetColor() != GameManager.Instance.MyColor || !LegalMovesHandler.IsMoveLegal(State, move.To, move.From)) return false;
         if (move.From.Piece.GetType() == PieceType.Pawn && (move.To.Coord.rank == 0 || move.To.Coord.rank == 7))
         {
-            pendingPromotion = move;
-            promotionPanel.SetActive(true);
-            SetStatus("Choose a promotion piece.");
-            return true;
+            pendingPromotion = move; panel.ShowPromotion(true); SetStatus("Choose a promotion piece."); return true;
         }
         return ApplyHumanMove(move);
     }
-
     private bool ApplyHumanMove(Move move)
     {
-        if (!State.TryApplyMove(move)) return false;
-        RenderMove(move);
+        if (!record.TryMove(move.ToUci())) return false;
+        viewedPly = record.Plies.Count;
+        DrawPosition(); RefreshStatus(); RestartAnalysis();
         _ = MoveForEngineAsync();
         return true;
     }
-
-    private void Promote(PieceType type)
+    public void Promote(PieceType type)
     {
         if (pendingPromotion == null) return;
-        Move move = pendingPromotion;
-        pendingPromotion = null;
-        promotionPanel.SetActive(false);
-        move.Promotion = type;
-        ApplyHumanMove(move);
+        Move move = pendingPromotion; pendingPromotion = null; panel.ShowPromotion(false);
+        move.Promotion = type; ApplyHumanMove(move);
     }
-
     private async Task MoveForEngineAsync()
     {
         if (!Ready || State.IsGameOver || GameManager.Instance.IsMyTurn() || Thinking) return;
-        var client = engine;
-        var cancellation = session.Token;
-        var position = State;
-        Thinking = true;
-        SetStatus("Opera is thinking…");
+        var client = engine; var cancellation = session.Token; var game = record;
+        int ply = game.Plies.Count; var turn = State.ColorToMove;
+        Thinking = true; RefreshStatus();
         try
         {
-            string[] history = position.MoveTracker.moves.Select(move => move.ToUci()).ToArray();
-            string response = await client.GetMoveAsync(history, thinkMilliseconds, cancellation);
-            if (cancellation.IsCancellationRequested || engine != client || position != State) return;
-            if (response == null) throw new InvalidOperationException("Opera returned no move in an unfinished game.");
-            Move move = Move.FromUci(position, response);
-            if (!position.TryApplyMove(move)) throw new InvalidOperationException("Opera's move disagrees with the board: " + response);
+            string response = await client.GetMoveAsync(game.History(ply), thinkMilliseconds, cancellation, info =>
+                uiUpdates.Enqueue(() => {
+                    if (record != game || engine != client || cancellation.IsCancellationRequested) return;
+                    game.Annotate(ply, info, turn);
+                    if (ShowAnalysis && viewedPly == ply && lastAnalysis == null)
+                        panel.Analysis(new[] { info }, game.PositionAt(ply), "Opponent's search");
+                }));
+            if (cancellation.IsCancellationRequested || engine != client || record != game) return;
+            bool follow = !Reviewing;
+            if (response == null || !game.TryMove(response)) throw new InvalidOperationException("Opera returned an invalid move: " + response);
             Thinking = false;
-            RenderMove(move);
+            if (follow) { viewedPly = record.Plies.Count; DrawPosition(); RestartAnalysis(); }
+            else panel.History(record, viewedPly);
+            GameManager.Instance.NotifyStateUpdated(); RefreshStatus();
+        }
+        catch (OperationCanceledException) { }
+        catch (Exception error) { if (!cancellation.IsCancellationRequested && engine == client) ReportError(error); }
+    }
+    public void ViewPly(int ply)
+    {
+        if (pendingPromotion != null) return;
+        ply = Math.Max(0, Math.Min(record.Plies.Count, ply));
+        if (ply == viewedPly) return;
+        BoardInputManager.Instance?.UnselectSquare();
+        viewedPly = ply; DrawPosition(); RefreshStatus(); RestartAnalysis();
+    }
+    private void DrawPosition()
+    {
+        if (panel == null || BoardRenderer.Instance == null) return;
+        var shown = Reviewing ? record.PositionAt(viewedPly) : State;
+        if (renderedSquares != shown.Board.squares)
+        {
+            BoardRenderer.Instance.RenderBoardSquares(shown.Board);
+            if (record.HumanColor == PieceColor.Black) BoardRenderer.Instance.FlipPerspective(shown.Board);
+            renderedSquares = shown.Board.squares;
+        }
+        else foreach (Square square in shown.Board.squares)
+        {
+            if (square.Renderer != null) square.Renderer.RemoveHighlight();
+            BoardRenderer.Instance.RenderPieceOnBoard(square);
+        }
+        if (viewedPly > 0)
+        {
+            string uci = record.Plies[viewedPly - 1].Uci;
+            shown.Board.GetSquareFromNotation(uci.Substring(0, 2)).Renderer?.AddHighlight();
+            shown.Board.GetSquareFromNotation(uci.Substring(2, 2)).Renderer?.AddHighlight();
+        }
+        panel.History(record, viewedPly);
+        GameManager.Instance.NotifyStateUpdated();
+    }
+    public void ToggleAnalysis()
+    {
+        ShowAnalysis = !ShowAnalysis;
+        panel.AnalysisVisible(ShowAnalysis);
+        RestartAnalysis();
+    }
+    private void RestartAnalysis()
+    {
+        StopAnalysis(); lastAnalysis = null;
+        if (!ShowAnalysis || panel == null) return;
+        var position = record.PositionAt(viewedPly);
+        if (position.IsGameOver)
+        {
+            panel.TerminalAnalysis(position); return;
+        }
+        panel.AnalysisPending();
+        analysisSession = new CancellationTokenSource();
+        _ = AnalyzeAsync(record, viewedPly, analysisGeneration, position, analysisSession.Token);
+    }
+    private async Task AnalyzeAsync(OperaGameRecord game, int ply, int generation, GameState position, CancellationToken cancellation)
+    {
+        UciEngineClient client = null;
+        try
+        {
+            // Debounce quick history navigation before starting a child process.
+            await Task.Delay(100, cancellation);
+            cancellation.ThrowIfCancellationRequested();
+            if (generation != analysisGeneration || game != record) return;
+            client = new UciEngineClient(); analysisEngine = client;
+            await client.StartAsync(OperaEngineLocator.FindExecutable(), cancellation);
+            string[] legal = ChessNotation.LegalUciMoves(position);
+            foreach (int milliseconds in new[] { 150, 500, 1500 })
+            {
+                var remaining = new List<string>(legal);
+                var lines = new List<UciSearchInfo>();
+                for (int candidate = 0; candidate < 3 && remaining.Count > 0; candidate++)
+                {
+                    int index = candidate; UciSearchInfo latest = null;
+                    string move = await client.GetMoveAsync(game.History(ply), milliseconds, cancellation, info => {
+                        if (info.Pv.Length == 0 || !remaining.Contains(info.Pv[0]) || info.IsBound) return;
+                        latest = info;
+                        var snapshot = lines.Concat(new[] { info }).ToArray();
+                        uiUpdates.Enqueue(() => {
+                            if (cancellation.IsCancellationRequested || generation != analysisGeneration || game != record || ply != viewedPly) return;
+                            if (index == 0) { lastAnalysis = info; game.Annotate(ply, info, position.ColorToMove); }
+                            panel.Analysis(snapshot, position, "Analyzing · scores favour White when positive", lastAnalysis);
+                        });
+                    }, candidate == 0 ? null : remaining);
+                    if (move == null) break;
+                    if (!remaining.Remove(move)) throw new InvalidDataException("Analysis returned a move outside its candidates.");
+                    if (latest != null && latest.Pv[0] == move) lines.Add(latest);
+                }
+                var completed = lines.ToArray();
+                uiUpdates.Enqueue(() => {
+                    if (!cancellation.IsCancellationRequested && generation == analysisGeneration && game == record && ply == viewedPly)
+                        panel.Analysis(completed, position, milliseconds == 1500 ? "Opera's estimate · + White / − Black" : "Refining candidates…", lastAnalysis);
+                });
+            }
         }
         catch (OperationCanceledException) { }
         catch (Exception error)
         {
-            if (!cancellation.IsCancellationRequested && engine == client) ReportError(error);
+            if (!cancellation.IsCancellationRequested && generation == analysisGeneration)
+                panel?.AnalysisUnavailable(error.Message);
+        }
+        finally
+        {
+            client?.Dispose();
+            if (analysisEngine == client) analysisEngine = null;
         }
     }
-
-    private void RenderMove(Move move)
-    {
-        foreach (Square square in State.Board.squares) BoardRenderer.Instance.RenderPieceOnBoard(square);
-        if (lastMoveText != null) lastMoveText.text = "Last move: " + move.From.Coord + " → " + move.To.Coord +
-            (move.Promotion == PieceType.None ? "" : " = " + move.Promotion);
-        GameManager.Instance.NotifyStateUpdated();
-        RefreshStatus();
-    }
-
     private void RefreshStatus()
     {
+        if (Reviewing)
+        {
+            SetStatus("Reviewing move " + ((viewedPly + 1) / 2) + " · " + (viewedPly % 2 == 0 ? "White" : "Black") + " to move" +
+                (Thinking ? "\nOpera is thinking at the live position." : "\nReturn to Live or resume from here.")); return;
+        }
         if (State.IsGameOver)
         {
-            if (State.Result == GameStateUtils.GameResult.Checkmate)
-                SetStatus(State.ColorToMove == GameManager.Instance.MyColor ? "Checkmate. Opera wins." : "Checkmate. You win!");
-            else SetStatus("Draw — " + DrawReason(State.Result));
-            engine?.Dispose();
-            Ready = false;
-            return;
+            SetStatus(record.Termination == "resignation" ? "You resigned. Opera wins." : State.Result == GameStateUtils.GameResult.Checkmate
+                ? State.ColorToMove == record.HumanColor ? "Checkmate. Opera wins." : "Checkmate. You win!"
+                : "Draw · " + State.Result);
+            Ready = false; engine?.Dispose(); engine = null; return;
         }
-        string turn = GameManager.Instance.IsMyTurn() ? "Your turn · " + GameManager.Instance.MyColor : "Opera's turn";
-        if (CheckUtils.IsKingInCheck(State.Board, State.ColorToMove)) turn += "\nCheck";
+        string turn = Thinking ? "Opera is thinking…" : GameManager.Instance.IsMyTurn() ? "Your turn · " + record.HumanColor : "Opera's turn";
+        if (CheckUtils.IsKingInCheck(State.Board, State.ColorToMove)) turn += " · Check";
         SetStatus(turn);
     }
-
-    private static string DrawReason(GameStateUtils.GameResult result) => result switch {
-        GameStateUtils.GameResult.Stalemate => "stalemate",
-        GameStateUtils.GameResult.InsufficientMaterial => "insufficient material",
-        GameStateUtils.GameResult.FiftyMoveRule => "fifty-move rule",
-        GameStateUtils.GameResult.ThreefoldRepetition => "threefold repetition", _ => "game over"
-    };
-
+    public void SetThinkingTime(int milliseconds)
+    {
+        thinkMilliseconds = milliseconds; record.MoveMilliseconds = milliseconds; panel.ThinkingTime(milliseconds);
+    }
     public void Resign()
     {
         if (State.IsGameOver) return;
-        StopSession();
-        State.IsGameOver = true;
-        pendingPromotion = null;
-        promotionPanel?.SetActive(false);
-        SetStatus("You resigned. Opera wins.");
+        StopAll(); record.Resign(); pendingPromotion = null; panel.ShowPromotion(false);
+        viewedPly = record.Plies.Count; DrawPosition(); RefreshStatus(); RestartAnalysis();
     }
-
+    private static string GameDirectory()
+    {
+        string documents = Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments);
+        string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        // Unity's Mono maps MyDocuments to the home directory on some Unix hosts.
+        if (!string.IsNullOrEmpty(profile) && (string.IsNullOrEmpty(documents) || documents == profile))
+            documents = Path.Combine(profile, "Documents");
+        return Path.Combine(string.IsNullOrEmpty(documents) ? Application.persistentDataPath : documents, "Opera Chess", "Games");
+    }
+    private string SaveGame()
+    {
+        exportsDirectory = GameDirectory();
+        Directory.CreateDirectory(exportsDirectory);
+        string path = Path.Combine(exportsDirectory, "Opera-" + DateTime.Now.ToString("yyyyMMdd-HHmmss-fff") + "-" + Guid.NewGuid().ToString("N").Substring(0, 4) + ".pgn");
+        File.WriteAllText(path, record.ExportPgn(viewedPly), new UTF8Encoding(false));
+        return path;
+    }
+    public void ExportGame()
+    {
+        try
+        {
+            string path = SaveGame(); GUIUtility.systemCopyBuffer = record.ExportPgn(viewedPly);
+            panel.Notice("PGN saved and copied. Use Show exports to find " + Path.GetFileName(path));
+        }
+        catch (Exception error) { panel.Notice("Export failed: " + error.Message); }
+    }
+    public void ShowExports()
+    {
+        try
+        {
+            exportsDirectory = GameDirectory(); Directory.CreateDirectory(exportsDirectory);
+            Application.OpenURL(new Uri(exportsDirectory + Path.DirectorySeparatorChar).AbsoluteUri);
+        }
+        catch (Exception error) { panel.Notice("Could not open exports: " + error.Message); }
+    }
+    private bool ArchiveBeforeReplacing()
+    {
+        if (record.Plies.Count == 0) return true;
+        try { SaveGame(); return true; }
+        catch (Exception error) { panel.Notice("Could not save the original game: " + error.Message); return false; }
+    }
     private void ReportError(Exception error)
     {
-        Debug.LogError("[Opera] " + error);
-        StopSession();
-        SetStatus("Opera could not continue.\nStart a new game to retry.\n" + error.Message);
+        Debug.LogError("[Opera] " + error); StopEngine(); SetStatus("Opera stopped. Start a new game or resume an earlier move.\n" + error.Message);
     }
-
-    private void SetStatus(string value)
+    private void SetStatus(string value) { Status = value; panel?.Status(value); }
+    private void StopAnalysis()
     {
-        Status = value;
-        if (statusText != null) statusText.text = value;
+        analysisGeneration++; analysisSession?.Cancel(); analysisEngine?.Dispose(); analysisEngine = null;
+        analysisSession?.Dispose(); analysisSession = null;
     }
-
-    private void StopSession()
+    private void StopEngine()
     {
-        Ready = false;
-        Thinking = false;
-        session?.Cancel();
-        engine?.Dispose();
-        engine = null;
-        session?.Dispose();
-        session = null;
+        Ready = false; Thinking = false; session?.Cancel(); engine?.Dispose(); engine = null; session?.Dispose(); session = null;
     }
-
-    private void ReturnToMenu()
+    private void StopAll() { StopEngine(); StopAnalysis(); }
+    public void ReturnToMenu()
     {
-        StopSession();
-        GameManager.Instance.ResetToDefault();
-        SceneManager.LoadScene(SceneLoader.MainMenu);
+        if (!ArchiveBeforeReplacing()) return;
+        StopAll(); GameManager.Instance.ResetToDefault(); SceneManager.LoadScene(SceneLoader.MainMenu);
     }
-
-    private void OnDestroy() { StopSession(); if (Instance == this) Instance = null; }
-    private void OnApplicationQuit() => StopSession();
-
-    private void BuildControls()
+    private void OnDestroy() { StopAll(); if (Instance == this) Instance = null; }
+    private void OnApplicationQuit()
     {
-        var root = new GameObject("Opera Controls", typeof(RectTransform), typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-        root.transform.SetParent(transform, false);
-        root.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
-        root.GetComponent<Canvas>().sortingOrder = 20;
-        var scaler = root.GetComponent<CanvasScaler>();
-        scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-        scaler.referenceResolution = new Vector2(1280, 800);
-        scaler.matchWidthOrHeight = 1;
-        var panel = new GameObject("Game Controls", typeof(RectTransform), typeof(Image));
-        panel.transform.SetParent(root.transform, false);
-        var rect = panel.GetComponent<RectTransform>();
-        rect.anchorMin = new Vector2(0.72f, 0); rect.anchorMax = Vector2.one;
-        rect.offsetMin = rect.offsetMax = Vector2.zero;
-        panel.GetComponent<Image>().color = new Color(0.065f, 0.08f, 0.10f);
-        Label(panel.transform, "Opera", 32, 54, 36);
-        Label(panel.transform, "PLAY THE CURRENT ENGINE", 90, 30, 14).color = new Color(0.65f, 0.75f, 0.63f);
-        statusText = Label(panel.transform, Status, 155, 125, 23);
-        lastMoveText = Label(panel.transform, "Click a piece to see its legal moves.", 292, 65, 16);
-        Button(panel.transform, "New game · White", 385, async () => await NewGameAsync(PieceColor.White));
-        Button(panel.transform, "New game · Black", 441, async () => await NewGameAsync(PieceColor.Black));
-        thinkingTimeText = Label(panel.transform, "Thinking time: 1 second", 515, 30, 16);
-        var times = Row(panel.transform, 552, 40);
-        int[] durations = { 250, 1000, 3000 };
-        for (int i = 0; i < durations.Length; i++)
-        {
-            int duration = durations[i];
-            var button = Button(times, (duration / 1000f).ToString("0.##") + "s", 0, () => {
-                thinkMilliseconds = duration;
-                thinkingTimeText.text = "Thinking time: " + (duration / 1000f).ToString("0.##") + " seconds";
-            });
-            Cell(button.GetComponent<RectTransform>(), i, 3);
-        }
-        Button(panel.transform, "Resign", 638, Resign);
-        Button(panel.transform, "Main menu", 704, ReturnToMenu);
-
-        promotionPanel = new GameObject("Promotion", typeof(RectTransform), typeof(Image));
-        promotionPanel.transform.SetParent(root.transform, false);
-        var popup = promotionPanel.GetComponent<RectTransform>();
-        popup.anchorMin = popup.anchorMax = new Vector2(0.36f, 0.5f);
-        popup.sizeDelta = new Vector2(560, 170);
-        promotionPanel.GetComponent<Image>().color = new Color(0.065f, 0.08f, 0.10f, 0.98f);
-        Label(popup, "Promote your pawn", 22, 40, 26);
-        var choices = Row(popup, 90, 50);
-        PieceType[] pieces = { PieceType.Queen, PieceType.Rook, PieceType.Bishop, PieceType.Knight };
-        for (int i = 0; i < pieces.Length; i++)
-        {
-            PieceType piece = pieces[i];
-            var button = Button(choices, piece.ToString(), 0, () => Promote(piece));
-            Cell(button.GetComponent<RectTransform>(), i, 4);
-        }
-        promotionPanel.SetActive(false);
-    }
-
-    private static RectTransform Row(Transform parent, float y, float height)
-    {
-        var rect = new GameObject("Row", typeof(RectTransform)).GetComponent<RectTransform>();
-        rect.SetParent(parent, false); Place(rect, y, height); return rect;
-    }
-    private static void Place(RectTransform rect, float y, float height)
-    {
-        rect.anchorMin = new Vector2(0, 1); rect.anchorMax = Vector2.one;
-        rect.pivot = new Vector2(0.5f, 1); rect.anchoredPosition = new Vector2(0, -y);
-        rect.sizeDelta = new Vector2(-48, height);
-    }
-    private static void Cell(RectTransform rect, int i, int count)
-    {
-        rect.anchorMin = new Vector2((float)i / count, 0); rect.anchorMax = new Vector2((float)(i + 1) / count, 1);
-        rect.offsetMin = new Vector2(3, 0); rect.offsetMax = new Vector2(-3, 0);
-    }
-    private static TextMeshProUGUI Label(Transform parent, string text, float y, float height, float size)
-    {
-        var label = new GameObject(text, typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();
-        label.transform.SetParent(parent, false); Place(label.rectTransform, y, height);
-        label.text = text; label.fontSize = size; label.color = new Color(0.92f, 0.94f, 0.9f);
-        label.raycastTarget = false; label.textWrappingMode = TextWrappingModes.Normal;
-        return label;
-    }
-    private static Button Button(Transform parent, string text, float y, UnityAction action)
-    {
-        var root = new GameObject(text, typeof(RectTransform), typeof(Image), typeof(Button));
-        root.transform.SetParent(parent, false); Place(root.GetComponent<RectTransform>(), y, 46);
-        root.GetComponent<Image>().color = new Color(0.22f, 0.31f, 0.23f);
-        var button = root.GetComponent<Button>(); button.onClick.AddListener(action);
-        var label = Label(root.transform, text, 0, 46, 18);
-        label.alignment = TextAlignmentOptions.Center;
-        label.rectTransform.anchorMin = Vector2.zero;
-        label.rectTransform.anchorMax = Vector2.one;
-        label.rectTransform.offsetMin = new Vector2(6, 0);
-        label.rectTransform.offsetMax = new Vector2(-6, 0);
-        return button;
+        if (record != null && record.Plies.Count > 0) { try { SaveGame(); } catch (Exception error) { Debug.LogWarning("[Opera] Autosave: " + error.Message); } }
+        StopAll();
     }
 }

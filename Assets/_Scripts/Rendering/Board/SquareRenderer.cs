@@ -20,7 +20,7 @@ public class SquareRenderer : MonoBehaviour
         HighlightColor = Color.Lerp(DefaultColor, new Color(0.95f, 0.78f, 0.25f), 0.65f);
         spriteRenderer = GetComponent<SpriteRenderer>();
         spriteRenderer.sprite = defaultSquareSprite;
-        spriteRenderer.color = DefaultColor;
+        if (spriteRenderer != null) spriteRenderer.color = DefaultColor;
 
         gameObject.name = $"Square_{squareData.Coord.ToString()}-({squareData.Coord.ToVector2().x},{squareData.Coord.ToVector2().y})-{squareData.Index}";
 
@@ -42,11 +42,11 @@ public class SquareRenderer : MonoBehaviour
 
     public void AddHighlight()
     {
-        spriteRenderer.color = HighlightColor;
+        if (spriteRenderer != null) spriteRenderer.color = HighlightColor;
     }
 
     public void RemoveHighlight()
     {
-        spriteRenderer.color = DefaultColor;
+        if (spriteRenderer != null) spriteRenderer.color = DefaultColor;
     }
 }
