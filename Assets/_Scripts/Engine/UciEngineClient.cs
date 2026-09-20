@@ -47,7 +47,7 @@ namespace Opera
                 Send("setoption name Hash value 16");
                 Send("setoption name Threads value 1");
                 Send("setoption name Ponder value false");
-                Send("setoption name MorphyStyle value false");
+                Send("setoption name MorphyStyle value true");
                 Send("setoption name Move Overhead value 10");
                 Send("ucinewgame");
                 Send("isready");
