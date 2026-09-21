@@ -35,7 +35,6 @@ namespace Opera
             var panel = Box(root.transform, "Play and review", Surface);
             panel.anchorMin = new Vector2(0.64f, 0); panel.anchorMax = Vector2.one; panel.offsetMin = panel.offsetMax = Vector2.zero;
             Label(panel, "OPERA", 18, 36, 28);
-            Label(panel, "DEVELOP. CREATE. ATTACK.", 55, 22, 12).color = Muted;
             status = Label(panel, "Starting Opera…", 88, 49, 18);
             location = Label(panel, "Live position", 143, 23, 13); location.color = Muted;
             var viewport = Box(panel, "Move list", new Color(0.045f, 0.057f, 0.071f)); Place(viewport, 171, 168);
