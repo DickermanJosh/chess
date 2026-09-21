@@ -20,10 +20,13 @@ namespace Opera
         private readonly RectTransform whiteMeter;
         private readonly GameObject analysisBody, promotion;
         private int lastWidth, lastHeight;
-        private static readonly Color Ink = new Color(0.92f, 0.94f, 0.90f);
-        private static readonly Color Muted = new Color(0.63f, 0.73f, 0.69f);
-        private static readonly Color Surface = new Color(0.065f, 0.08f, 0.10f);
-        private static readonly Color ButtonColor = new Color(0.18f, 0.26f, 0.23f);
+        private readonly OperaPlayerCard opponentCard, humanCard;
+        private readonly TextMeshProUGUI soundLabel;
+        private readonly Button[] thinkingButtons = new Button[3];
+        private static readonly Color Ink = OperaTheme.Ink;
+        private static readonly Color Muted = OperaTheme.Muted;
+        private static readonly Color Surface = OperaTheme.Surface;
+        private static readonly Color ButtonColor = OperaTheme.ButtonFace;
         public OperaPlayPanel(Transform parent, OperaGameController game)
         {
             this.game = game;
@@ -34,10 +37,19 @@ namespace Opera
             scaler = root.GetComponent<CanvasScaler>(); scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
             var panel = Box(root.transform, "Play and review", Surface);
             panel.anchorMin = new Vector2(0.64f, 0); panel.anchorMax = Vector2.one; panel.offsetMin = panel.offsetMax = Vector2.zero;
-            Label(panel, "OPERA", 18, 36, 28);
+            var title = Label(panel, "Chess", 13, 49, 39); title.font = OperaTheme.Serif; title.overflowMode = TextOverflowModes.Overflow;
+            var rule = Box(panel, "Brass divider", new Color(.70f, .60f, .40f, .30f)); Place(rule, 80, 1);
+            var sound = Button(panel, OperaAudio.Muted ? "Sound off" : "Sound on", () => {
+                OperaAudio.Muted = !OperaAudio.Muted; soundLabel.text = OperaAudio.Muted ? "Sound off" : "Sound on";
+            });
+            var soundRect = sound.GetComponent<RectTransform>(); soundRect.anchorMin = soundRect.anchorMax = Vector2.one;
+            soundRect.sizeDelta = new Vector2(91, 29); soundRect.anchoredPosition = new Vector2(-67, -34);
+            soundLabel = sound.GetComponentInChildren<TextMeshProUGUI>(); soundLabel.fontSize = 12;
+            opponentCard = new OperaPlayerCard(root.transform, true);
+            humanCard = new OperaPlayerCard(root.transform, false);
             status = Label(panel, "Starting Opera…", 88, 49, 18);
             location = Label(panel, "Live position", 143, 23, 13); location.color = Muted;
-            var viewport = Box(panel, "Move list", new Color(0.045f, 0.057f, 0.071f)); Place(viewport, 171, 168);
+            var viewport = Box(panel, "Move list", OperaTheme.Recess); Place(viewport, 171, 168);
             viewport.gameObject.AddComponent<RectMask2D>();
             historyScroll = viewport.gameObject.AddComponent<ScrollRect>();
             historyScroll.horizontal = false; historyScroll.movementType = ScrollRect.MovementType.Clamped;
@@ -46,7 +58,7 @@ namespace Opera
             historyContent.SetParent(viewport, false); historyContent.anchorMin = new Vector2(0, 1); historyContent.anchorMax = Vector2.one;
             historyContent.pivot = new Vector2(0.5f, 1); historyContent.anchoredPosition = Vector2.zero;
             historyScroll.content = historyContent;
-            var track = Box(viewport, "History scrollbar", new Color(0.10f, 0.13f, 0.14f));
+            var track = Box(viewport, "History scrollbar", OperaTheme.Surface);
             track.anchorMin = new Vector2(1, 0); track.anchorMax = Vector2.one;
             track.offsetMin = new Vector2(-7, 2); track.offsetMax = new Vector2(-1, -2);
             var thumb = Box(track, "Scroll handle", Muted);
@@ -66,13 +78,13 @@ namespace Opera
             var exports = Row(panel, 420, 32);
             Cell(Button(exports, "Export game · PGN", game.ExportGame), 0, 2);
             Cell(Button(exports, "Show exports", game.ShowExports), 1, 2);
-            notice = Label(panel, "Arrow keys review moves. Export a PGN to share this game.", 460, 37, 12); notice.color = Muted;
+            notice = Label(panel, "Drag or click to move. Select your king, then its rook to castle.", 460, 37, 12); notice.color = Muted;
             var toggle = Button(panel, "Analysis: shown · click to hide", game.ToggleAnalysis); Place(toggle.GetComponent<RectTransform>(), 504, 29);
             toggleLabel = toggle.GetComponentInChildren<TextMeshProUGUI>(); toggleLabel.fontSize = 14;
             analysisBody = new GameObject("Evaluation and candidate lines", typeof(RectTransform));
             analysisBody.transform.SetParent(panel, false);
             var analysisRect = analysisBody.GetComponent<RectTransform>(); Place(analysisRect, 539, 147);
-            var meter = Box(analysisRect, "Black evaluation share", new Color(0.14f, 0.16f, 0.18f));
+            var meter = Box(analysisRect, "Black evaluation share", OperaTheme.Recess);
             Place(meter, 0, 10, 0);
             whiteMeter = Box(meter, "White evaluation share", Ink);
             whiteMeter.anchorMin = Vector2.zero; whiteMeter.anchorMax = new Vector2(0.5f, 1); whiteMeter.offsetMin = whiteMeter.offsetMax = Vector2.zero;
@@ -89,18 +101,18 @@ namespace Opera
             int[] values = { 250, 1000, 3000 };
             for (int i = 0; i < values.Length; ++i)
             {
-                int value = values[i]; Cell(Button(durations, (value / 1000f).ToString("0.##") + "s", () => game.SetThinkingTime(value)), i, 3);
+                int value = values[i]; thinkingButtons[i] = Button(durations, (value / 1000f).ToString("0.##") + "s", () => game.SetThinkingTime(value)); Cell(thinkingButtons[i], i, 3);
             }
             var bottom = Row(panel, 766, 26);
             Cell(Button(bottom, "Resign", game.Resign), 0, 2); Cell(Button(bottom, "Main menu", game.ReturnToMenu), 1, 2);
             promotion = new GameObject("Promotion", typeof(RectTransform), typeof(Image)); promotion.transform.SetParent(root.transform, false);
-            var popup = promotion.GetComponent<RectTransform>(); popup.anchorMin = popup.anchorMax = new Vector2(0.32f, 0.5f); popup.sizeDelta = new Vector2(520, 150);
-            promotion.GetComponent<Image>().color = Surface;
+            OperaTheme.Stretch(promotion.GetComponent<RectTransform>()); var popup = Box(promotion.transform, "Choose promotion", Surface); popup.anchorMin = popup.anchorMax = new Vector2(.32f, .5f); popup.sizeDelta = new Vector2(520, 170);
+            promotion.GetComponent<Image>().color = new Color(.06f, .04f, .025f, .72f);
             Label(popup, "Promote your pawn", 20, 35, 25);
             var choices = Row(popup, 85, 45);
             PieceType[] pieces = { PieceType.Queen, PieceType.Rook, PieceType.Bishop, PieceType.Knight };
             for (int i = 0; i < pieces.Length; ++i) { PieceType piece = pieces[i]; Cell(Button(choices, piece.ToString(), () => game.Promote(piece)), i, 4); }
-            promotion.SetActive(false); Resize();
+            promotion.SetActive(false); Resize(); ThinkingTime(1000);
         }
         public void Resize()
         {
@@ -110,12 +122,29 @@ namespace Opera
             if (Camera.main != null)
             {
                 Camera.main.rect = new Rect(0, 0, 0.64f, 1);
-                Camera.main.orthographicSize = Mathf.Max(4.65f, 4.65f / Camera.main.aspect);
+                Camera.main.orthographicSize = Mathf.Max(5.8f, 4.85f / Camera.main.aspect);
+                float cardWidth = 8.94f * Screen.height / (2 * Camera.main.orthographicSize * scaler.scaleFactor);
+                opponentCard.Rect.anchorMin = opponentCard.Rect.anchorMax = new Vector2(.32f, 1);
+                humanCard.Rect.anchorMin = humanCard.Rect.anchorMax = new Vector2(.32f, 0);
+                opponentCard.Rect.anchoredPosition = new Vector2(0, -46);
+                humanCard.Rect.anchoredPosition = new Vector2(0, 46);
+                opponentCard.Rect.sizeDelta = humanCard.Rect.sizeDelta = new Vector2(cardWidth, 60);
             }
         }
         public void Status(string text) => status.text = text;
         public void Notice(string text) => notice.text = text;
-        public void ThinkingTime(int ms) => time.text = "Think: " + (ms / 1000f).ToString("0.##") + "s";
+        public void ThinkingTime(int ms)
+        {
+            time.text = "Think: " + (ms / 1000f).ToString("0.##") + "s";
+            int[] values = { 250, 1000, 3000 };
+            for (int i = 0; i < values.Length; i++)
+                thinkingButtons[i].GetComponent<Image>().color = values[i] == ms ? OperaTheme.Hex("6A5940") : ButtonColor;
+        }
+        public void Players(GameState shown)
+        {
+            opponentCard.Update(game.Record.HumanColor, shown.ColorToMove, game.Thinking, game.Reviewing, shown.IsGameOver);
+            humanCard.Update(game.Record.HumanColor, shown.ColorToMove, game.Thinking, game.Reviewing, shown.IsGameOver);
+        }
         public void ShowPromotion(bool value) => promotion.SetActive(value);
         public void History(OperaGameRecord record, int selected)
         {
@@ -134,7 +163,7 @@ namespace Opera
                 var button = Button(historyContent, record.Plies[i].San, () => game.ViewPly(ply));
                 var rect = button.GetComponent<RectTransform>(); Place(rect, i / 2 * 28 + 4, 26, 0);
                 rect.anchorMin = new Vector2(i % 2 == 0 ? 0.14f : 0.56f, 1); rect.anchorMax = new Vector2(i % 2 == 0 ? 0.54f : 0.96f, 1);
-                button.GetComponent<Image>().color = selected == ply ? new Color(0.31f, 0.43f, 0.32f) : new Color(0.08f, 0.105f, 0.12f);
+                button.GetComponent<Image>().color = selected == ply ? OperaTheme.Hex("625339") : OperaTheme.Recess;
                 button.GetComponentInChildren<TextMeshProUGUI>().alignment = TextAlignmentOptions.MidlineLeft;
             }
             bool reviewing = selected != record.Plies.Count;
@@ -179,40 +208,21 @@ namespace Opera
             candidates.text = "No further moves."; analysisCaption.text = "Final position";
             whiteMeter.anchorMax = new Vector2(mate ? (position.ColorToMove == PieceColor.White ? 0 : 1) : 0.5f, 1);
         }
-        private static RectTransform Box(Transform parent, string name, Color color)
-        {
-            var obj = new GameObject(name, typeof(RectTransform), typeof(Image)); obj.transform.SetParent(parent, false); obj.GetComponent<Image>().color = color;
-            return obj.GetComponent<RectTransform>();
-        }
+        private static RectTransform Box(Transform parent, string name, Color color) =>
+            OperaTheme.Box(parent, name, color, true, true);
         private static RectTransform Row(Transform parent, float y, float height)
         {
-            var rect = new GameObject("Row", typeof(RectTransform)).GetComponent<RectTransform>(); rect.SetParent(parent, false); Place(rect, y, height); return rect;
+            var rect = new GameObject("Row", typeof(RectTransform)).GetComponent<RectTransform>();
+            rect.SetParent(parent, false); Place(rect, y, height); return rect;
         }
-        private static void Place(RectTransform rect, float y, float height, float inset = 40)
-        {
-            rect.anchorMin = new Vector2(0, 1); rect.anchorMax = Vector2.one; rect.pivot = new Vector2(0.5f, 1);
-            rect.anchoredPosition = new Vector2(0, -y); rect.sizeDelta = new Vector2(-inset, height);
-        }
+        private static void Place(RectTransform rect, float y, float height, float inset = 40) => OperaTheme.Place(rect, y, height, inset);
         private static void Cell(Button button, int i, int count)
         {
             var rect = button.GetComponent<RectTransform>(); rect.anchorMin = new Vector2((float)i / count, 0); rect.anchorMax = new Vector2((float)(i + 1) / count, 1);
             rect.offsetMin = new Vector2(3, 0); rect.offsetMax = new Vector2(-3, 0);
         }
-        private static TextMeshProUGUI Label(Transform parent, string text, float y, float height, float size, float inset = 40)
-        {
-            var label = new GameObject("Label", typeof(RectTransform), typeof(TextMeshProUGUI)).GetComponent<TextMeshProUGUI>();
-            label.transform.SetParent(parent, false); Place(label.rectTransform, y, height, inset);
-            label.text = text; label.fontSize = size; label.color = Ink; label.raycastTarget = false; label.richText = false;
-            label.textWrappingMode = TextWrappingModes.Normal; label.overflowMode = TextOverflowModes.Ellipsis; return label;
-        }
-        private static Button Button(Transform parent, string text, UnityAction action)
-        {
-            var rect = Box(parent, text, ButtonColor); var button = rect.gameObject.AddComponent<Button>(); button.onClick.AddListener(action);
-            var colors = button.colors; colors.highlightedColor = new Color(1.18f, 1.18f, 1.18f); colors.disabledColor = new Color(0.5f, 0.5f, 0.5f); button.colors = colors;
-            var label = Label(rect, text, 0, 30, 14); label.alignment = TextAlignmentOptions.Center;
-            label.rectTransform.anchorMin = Vector2.zero; label.rectTransform.anchorMax = Vector2.one;
-            label.rectTransform.offsetMin = new Vector2(8, 0); label.rectTransform.offsetMax = new Vector2(-8, 0);
-            return button;
-        }
+        private static TextMeshProUGUI Label(Transform parent, string text, float y, float height, float size, float inset = 40) =>
+            OperaTheme.Label(parent, text, y, height, size, inset);
+        private static Button Button(Transform parent, string text, UnityAction action) => OperaTheme.Button(parent, text, action);
     }
 }

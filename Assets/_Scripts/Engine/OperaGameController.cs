@@ -132,7 +132,9 @@ public class OperaGameController : MonoBehaviour
     }
     private bool ApplyHumanMove(Move move)
     {
+        var sound = MoveSound(State, move);
         if (!record.TryMove(move.ToUci())) return false;
+        OperaAudio.Play(sound);
         viewedPly = record.Plies.Count;
         DrawPosition(); RefreshStatus(); RestartAnalysis();
         _ = MoveForEngineAsync();
@@ -161,7 +163,10 @@ public class OperaGameController : MonoBehaviour
                 }));
             if (cancellation.IsCancellationRequested || engine != client || record != game) return;
             bool follow = !Reviewing;
-            if (response == null || !game.TryMove(response)) throw new InvalidOperationException("Opera returned an invalid move: " + response);
+            if (response == null) throw new InvalidOperationException("Opera returned no move.");
+            var sound = MoveSound(State, Move.FromUci(State, response));
+            if (!game.TryMove(response)) throw new InvalidOperationException("Opera returned an invalid move: " + response);
+            if (follow) OperaAudio.Play(sound);
             Thinking = false;
             if (follow) { viewedPly = record.Plies.Count; DrawPosition(); RestartAnalysis(); }
             else panel.History(record, viewedPly);
@@ -181,6 +186,7 @@ public class OperaGameController : MonoBehaviour
     private void DrawPosition()
     {
         if (panel == null || BoardRenderer.Instance == null) return;
+        BoardInputManager.Instance?.UnselectSquare();
         var shown = Reviewing ? record.PositionAt(viewedPly) : State;
         if (renderedSquares != shown.Board.squares)
         {
@@ -190,16 +196,16 @@ public class OperaGameController : MonoBehaviour
         }
         else foreach (Square square in shown.Board.squares)
         {
-            if (square.Renderer != null) square.Renderer.RemoveHighlight();
+            if (square.Renderer != null) { square.Renderer.RemoveHighlight(); square.Renderer.SetLastMove(false); }
             BoardRenderer.Instance.RenderPieceOnBoard(square);
         }
         if (viewedPly > 0)
         {
             string uci = record.Plies[viewedPly - 1].Uci;
-            shown.Board.GetSquareFromNotation(uci.Substring(0, 2)).Renderer?.AddHighlight();
-            shown.Board.GetSquareFromNotation(uci.Substring(2, 2)).Renderer?.AddHighlight();
+            shown.Board.GetSquareFromNotation(uci.Substring(0, 2)).Renderer?.SetLastMove(true);
+            shown.Board.GetSquareFromNotation(uci.Substring(2, 2)).Renderer?.SetLastMove(true);
         }
-        panel.History(record, viewedPly);
+        panel.History(record, viewedPly); panel.Players(shown);
         GameManager.Instance.NotifyStateUpdated();
     }
     public void ToggleAnalysis()
@@ -346,7 +352,16 @@ public class OperaGameController : MonoBehaviour
     {
         Debug.LogError("[Opera] " + error); StopEngine(); SetStatus("Opera stopped. Start a new game or resume an earlier move.\n" + error.Message);
     }
-    private void SetStatus(string value) { Status = value; panel?.Status(value); }
+    private static OperaSound MoveSound(GameState state, Move move)
+    {
+        if (move.From.Piece.GetType() == PieceType.King && Math.Abs(move.From.Coord.file - move.To.Coord.file) == 2) return OperaSound.Castle;
+        return BoardMoveIntent.IsCapture(state, move.From, move.To) ? OperaSound.Capture : OperaSound.Move;
+    }
+    private void SetStatus(string value)
+    {
+        Status = value; panel?.Status(value);
+        if (record != null) panel?.Players(Reviewing ? record.PositionAt(viewedPly) : State);
+    }
     private void StopAnalysis()
     {
         analysisGeneration++; analysisSession?.Cancel(); analysisEngine?.Dispose(); analysisEngine = null;

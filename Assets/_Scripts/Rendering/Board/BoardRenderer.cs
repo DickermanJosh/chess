@@ -1,219 +1,108 @@
 using Core;
+using Opera;
 using System.Collections.Generic;
-using Unity.VisualScripting;
+using TMPro;
 using UnityEngine;
 
 namespace Render
 {
     public class BoardRenderer : MonoBehaviour
     {
-        [Header("References")]
         public Sprite defaultSquareSprite;
+        public Color whiteSquareColor = Color.white, blackSquareColor = Color.black;
+        public Sprite whitePawnSprite, whiteKnightSprite, whiteBishopSprite, whiteRookSprite, whiteQueenSprite, whiteKingSprite;
+        public Sprite blackPawnSprite, blackKnightSprite, blackBishopSprite, blackRookSprite, blackQueenSprite, blackKingSprite;
+        public float squareSize = 1;
+        private readonly Dictionary<int, PieceRenderer> pieces = new();
+        private readonly List<TextMeshPro> coordinates = new();
+        public static BoardRenderer Instance { get; private set; }
+        private void Awake() { if (Instance != null && Instance != this) Destroy(Instance); Instance = this; }
 
-        [Header("Square Colors")]
-        [Tooltip("Color tint for squares designated 'white'.")]
-        public Color whiteSquareColor = Color.white;
-
-        [Tooltip("Color tint for squares designated 'black'.")]
-        public Color blackSquareColor = Color.black;
-
-        [Header("Piece Sprites")]
-        public Sprite whitePawnSprite;
-        public Sprite whiteKnightSprite;
-        public Sprite whiteBishopSprite;
-        public Sprite whiteRookSprite;
-        public Sprite whiteQueenSprite;
-        public Sprite whiteKingSprite;
-
-        public Sprite blackPawnSprite;
-        public Sprite blackKnightSprite;
-        public Sprite blackBishopSprite;
-        public Sprite blackRookSprite;
-        public Sprite blackQueenSprite;
-        public Sprite blackKingSprite;
-
-        [Header("Settings")]
-        [Tooltip("How large each square is in world units")]
-        public float squareSize = 1.0f;
-
-        // List of all the active pieceRenderers in the sceen to prevent doubling up
-        // renderers on the same square
-        private Dictionary<int, PieceRenderer> pieceRenderers = new();
-
-        private static BoardRenderer _instance;
-        public static BoardRenderer Instance => _instance;
-
-        private void Awake()
-        {
-            if (_instance is not null)
-            {
-                Destroy(_instance);
-            }
-
-            _instance = this;
-        }
-
-        /// <summary>
-        /// Spawns SquareRenderer objects as children and assigns the correct sprite/color/position.
-        /// Also creates PieceRenderer objects to render potential pieces on the squares
-        /// </summary>
         public void RenderBoardSquares(Board board)
         {
-            if (board.squares is null)
-            {
-                Debug.LogError("BoardRenderer: The board data is not initialized.");
-                return;
-            }
-
-            foreach (Transform child in transform)
-            {
-                child.gameObject.SetActive(false);
-                Destroy(child.gameObject);
-            }
-            pieceRenderers.Clear();
-            transform.rotation = Quaternion.identity;
-
+            if (board.squares == null) return;
+            BoardInputManager.Instance?.UnselectSquare();
+            foreach (Transform child in transform) { child.gameObject.SetActive(false); Destroy(child.gameObject); }
+            pieces.Clear(); coordinates.Clear(); transform.rotation = Quaternion.identity;
+            if (Camera.main != null) Camera.main.backgroundColor = OperaTheme.Background;
+            // Replace the persistent space backdrop if this scene came through Init.
+            foreach (var background in FindObjectsByType<SpaceBackgroundRenderer>(FindObjectsSortMode.None))
+                background.gameObject.SetActive(false);
+            Frame();
             foreach (Square square in board.squares)
             {
-                CreateSquareAndPieceRenderer(square);
+                var squareObject = new GameObject("Square " + square.Coord);
+                squareObject.transform.SetParent(transform, false);
+                var renderer = squareObject.AddComponent<SquareRenderer>();
+                renderer.Init(square, defaultSquareSprite, square.IsWhite ? OperaTheme.LightSquare : OperaTheme.DarkSquare, squareSize);
+                square.Renderer = renderer;
+                var pieceObject = new GameObject("Piece");
+                pieceObject.transform.SetParent(squareObject.transform, false);
+                var piece = pieceObject.AddComponent<PieceRenderer>();
+                piece.Init(square.Piece, GetPieceSprite(square.Piece), Vector2.zero); pieces.Add(square.Index, piece);
+            }
+            for (int i = 0; i < 8; i++)
+            {
+                float position = (i - 3.5f) * squareSize;
+                Coordinate(((char)('a' + i)).ToString(), new Vector2(position, -4.23f * squareSize));
+                Coordinate((i + 1).ToString(), new Vector2(-4.23f * squareSize, position));
             }
         }
-
-        /// <summary>
-        /// Updates the renderers for the indexes of the given list of squares.
-        /// </summary>
+        private void Frame()
+        {
+            OperaTheme.World(transform, "Linen table", OperaTheme.Grain, Vector2.zero, Vector2.one * 100, OperaTheme.Background, -20);
+            OperaTheme.World(transform, "Board shadow", OperaTheme.Pixel, new Vector2(.025f, -.09f), Vector2.one * (9.04f * squareSize), new Color(.06f, .04f, .025f, .45f), -8);
+            OperaTheme.World(transform, "Walnut frame", OperaTheme.Wood, Vector2.zero, Vector2.one * (8.94f * squareSize), OperaTheme.Hex("513E2E"), -7);
+            OperaTheme.World(transform, "Brass outer inlay", OperaTheme.Pixel, Vector2.zero, Vector2.one * (8.83f * squareSize), OperaTheme.Brass * new Color(.65f, .65f, .65f, 1), -6);
+            OperaTheme.World(transform, "Frame face", OperaTheme.Wood, Vector2.zero, Vector2.one * (8.80f * squareSize), OperaTheme.Hex("4C392B"), -5);
+            OperaTheme.World(transform, "Brass inner inlay", OperaTheme.Pixel, Vector2.zero, Vector2.one * (8.07f * squareSize), OperaTheme.Brass, -4);
+        }
+        private void Coordinate(string text, Vector2 position)
+        {
+            var label = new GameObject("Coordinate " + text, typeof(TextMeshPro)).GetComponent<TextMeshPro>();
+            label.transform.SetParent(transform, false); label.transform.localPosition = position;
+            label.rectTransform.sizeDelta = new Vector2(.4f, .4f) * squareSize;
+            label.text = text; label.font = OperaTheme.Serif; label.fontSize = 2.6f * squareSize;
+            label.color = OperaTheme.Ink; label.alignment = TextAlignmentOptions.Center;
+            label.GetComponent<MeshRenderer>().sortingOrder = 3; coordinates.Add(label);
+        }
         public void RenderChangedSquares(List<int> changedSquares, Board board)
         {
-            foreach (int sqIndex in changedSquares)
-            {
-                BoardRenderer.Instance.RenderPieceOnBoard(board.squares[sqIndex]);
-            }
+            BoardInputManager.Instance?.UnselectSquare();
+            foreach (int index in changedSquares) RenderPieceOnBoard(board.squares[index]);
         }
-
-        /// <summary>
-        /// Renders a piece on the board using the square's already created PieceRenderer
-        /// Achieves this by swapping out the sprite stored in the PieceRenderer
-        /// </summary>
         public void RenderPieceOnBoard(Square square)
         {
-            if (square == null)
-            {
-                Debug.LogError("BoardRenderer: The board data is not initialized.");
-                return;
-            }
-            PieceRenderer renderer = GetRendererFromIndex(square.Index);
-
-            renderer.ChangePiece(square.Piece, GetPieceSprite(square.Piece));
-
+            if (square != null && pieces.TryGetValue(square.Index, out var renderer))
+                renderer.ChangePiece(square.Piece, GetPieceSprite(square.Piece));
         }
-
-        private void CreateSquareAndPieceRenderer(Square square)
-        {
-            GameObject squareObj = CreateSquareRenderer(square);
-            CreatePieceRenderer(square, squareObj);
-        }
-
-        private GameObject CreateSquareRenderer(Square square)
-        {
-            // Create child at runtime, attach a square renderer, assign it a color and initialize it
-            GameObject squareObj = new GameObject("Square");
-            squareObj.transform.parent = this.transform;
-
-            SquareRenderer renderer = squareObj.AddComponent<SquareRenderer>();
-            Color squareColor = square.IsWhite ? whiteSquareColor : blackSquareColor;
-
-            renderer.Init(square, defaultSquareSprite, squareColor, squareSize);
-
-            square.Renderer = renderer;
-
-            return squareObj;
-        }
-
-        private void CreatePieceRenderer(Square square, GameObject squareObj)
-        {
-            // Create a child object for the piece
-            GameObject pieceObj = new GameObject("PieceObject");
-            pieceObj.transform.parent = squareObj.transform;
-
-            PieceRenderer pieceRenderer = pieceObj.AddComponent<PieceRenderer>();
-
-            Sprite pieceSprite = GetPieceSprite(square.Piece);
-
-            float xPos = square.Coord.file * squareSize - 3.5f;
-            float yPos = square.Coord.rank * squareSize - 3.5f;
-
-            pieceRenderer.Init(
-                square.Piece,
-                pieceSprite,
-                new Vector2(xPos, yPos)
-            );
-
-            pieceRenderers.Add(square.Index, pieceRenderer);
-        }
-
-        private PieceRenderer GetRendererFromIndex(int squareIndex)
-        {
-            if (pieceRenderers.TryGetValue(squareIndex, out PieceRenderer r))
-            {
-                return r;
-            }
-
-            return null;
-        }
-
+        public PieceRenderer GetRendererFromIndex(int index) => pieces.TryGetValue(index, out var renderer) ? renderer : null;
         public void FlipPerspective(Board board)
         {
-            Flip180();
-            foreach (Square square in board.squares)
+            transform.rotation = Quaternion.Euler(0, 0, 180);
+            foreach (var piece in pieces.Values) piece.Flip180();
+            // The board rotates, but coordinates stay on the visible bottom and
+            // left edges. Their labels follow the files/ranks and remain upright.
+            for (int i = 0; i < 8; i++)
             {
-                PieceRenderer renderer = GetRendererFromIndex(square.Index);
-
-                renderer.Flip180();
+                float position = (i - 3.5f) * squareSize;
+                coordinates[i * 2].transform.localPosition = new Vector2(position, 4.23f * squareSize);
+                coordinates[i * 2 + 1].transform.localPosition = new Vector2(4.23f * squareSize, position);
             }
+            foreach (var label in coordinates) label.transform.localRotation = Quaternion.Euler(0, 0, 180);
         }
-
-        private void Flip180()
+        public Sprite GetPieceSprite(Piece piece)
         {
-            gameObject.transform.rotation = Quaternion.Euler(0f, 0f, 180f);
+            bool white = piece.GetColor() == PieceColor.White;
+            return piece.GetType() switch {
+                PieceType.Pawn => white ? whitePawnSprite : blackPawnSprite,
+                PieceType.Knight => white ? whiteKnightSprite : blackKnightSprite,
+                PieceType.Bishop => white ? whiteBishopSprite : blackBishopSprite,
+                PieceType.Rook => white ? whiteRookSprite : blackRookSprite,
+                PieceType.Queen => white ? whiteQueenSprite : blackQueenSprite,
+                PieceType.King => white ? whiteKingSprite : blackKingSprite, _ => null
+            };
         }
-
-        /// <summary>
-        /// Return the correct sprite for the given piece.
-        /// TODO: Change to utilize Dictionary<(PieceType, PieceColor), Sprite> instead of switch
-        /// </summary>
-        private Sprite GetPieceSprite(Piece piece)
-        {
-            if (piece.GetType() == PieceType.None || piece.GetColor() == PieceColor.None)
-            {
-                return null;
-            }
-
-            if (piece.GetColor() != PieceColor.Black)
-            {
-                switch (piece.GetType())
-                {
-                    case PieceType.Pawn: return whitePawnSprite;
-                    case PieceType.Knight: return whiteKnightSprite;
-                    case PieceType.Bishop: return whiteBishopSprite;
-                    case PieceType.Rook: return whiteRookSprite;
-                    case PieceType.Queen: return whiteQueenSprite;
-                    case PieceType.King: return whiteKingSprite;
-                }
-            }
-            else
-            {
-                switch (piece.GetType())
-                {
-                    case PieceType.Pawn: return blackPawnSprite;
-                    case PieceType.Knight: return blackKnightSprite;
-                    case PieceType.Bishop: return blackBishopSprite;
-                    case PieceType.Rook: return blackRookSprite;
-                    case PieceType.Queen: return blackQueenSprite;
-                    case PieceType.King: return blackKingSprite;
-                }
-            }
-
-            return null;
-        }
+        private void OnDestroy() { if (Instance == this) Instance = null; }
     }
 }

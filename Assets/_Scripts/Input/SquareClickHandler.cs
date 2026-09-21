@@ -2,13 +2,38 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 [RequireComponent(typeof(SquareRenderer))]
-public class SquareClickHandler : MonoBehaviour, IPointerClickHandler
+public class SquareClickHandler : MonoBehaviour, IPointerClickHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
 {
-    // Use the same Input System / EventSystem path as the menus. Graphic UI
-    // raycasts take priority, so a promotion or menu click cannot move a piece.
-    public void OnPointerClick(PointerEventData eventData)
+    private bool dragged;
+    private SquareRenderer Square => GetComponent<SquareRenderer>();
+    private static Core.Square Target(PointerEventData data)
     {
-        if (eventData.button != PointerEventData.InputButton.Left) return;
-        BoardInputManager.Instance?.OnSquareClicked(GetComponent<SquareRenderer>().squareData);
+        // The EventSystem's topmost hit respects menus and promotion overlays.
+        // Do not fall through UI by doing a separate physics raycast.
+        var hit = data.pointerCurrentRaycast.gameObject;
+        return hit == null ? null : hit.GetComponent<SquareRenderer>()?.squareData;
+    }
+    public void OnPointerClick(PointerEventData data)
+    {
+        if (data.button != PointerEventData.InputButton.Left || dragged) { dragged = false; return; }
+        BoardInputManager.Instance?.OnSquareClicked(Square.squareData);
+    }
+    public void OnBeginDrag(PointerEventData data)
+    {
+        dragged = data.button == PointerEventData.InputButton.Left;
+        if (dragged && BoardInputManager.Instance?.BeginDrag(Square.squareData, data.pointerId) == true)
+            OnDrag(data);
+    }
+    public void OnDrag(PointerEventData data)
+    {
+        if (data.button == PointerEventData.InputButton.Left)
+            BoardInputManager.Instance?.DragTo(data.position, Target(data), data.pointerId);
+    }
+    public void OnEndDrag(PointerEventData data)
+    {
+        if (data.button == PointerEventData.InputButton.Left)
+            BoardInputManager.Instance?.EndDrag(Target(data), data.pointerId);
+        // Unity suppresses click when a drag ends. Reset here for the next click.
+        dragged = false;
     }
 }

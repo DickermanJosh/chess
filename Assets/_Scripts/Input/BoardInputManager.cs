@@ -1,96 +1,119 @@
-using UnityEngine;
 using Core;
-using System.Collections.Generic;
-using Managers;
+using Opera;
 using Render;
+using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class BoardInputManager : MonoBehaviour
 {
     public static BoardInputManager Instance { get; private set; }
+    public Square SelectedSquare => selectedSquare;
+    public bool IsDragging => draggedPiece != null;
+    private Square selectedSquare, hoveredSquare;
+    private PieceRenderer draggedPiece;
+    private int dragPointerId;
 
-    // Keep track of the currently selected square/piece
-    private Square selectedSquare;
+    private bool CanInteract => GameManager.Instance != null && GameManager.Instance.IsMyTurn() &&
+        (!GameManager.Instance.IsEngineGame ||
+         (OperaGameController.Instance != null && OperaGameController.Instance.CanHumanMove));
 
     private void Awake()
     {
-        if (Instance != null)
-            Destroy(Instance);
-
+        if (Instance != null && Instance != this) Destroy(Instance);
         Instance = this;
     }
-
-    public void OnSquareClicked(Square clickedSquare)
+    private void Update()
     {
-        if (clickedSquare == null || GameManager.Instance == null || !GameManager.Instance.IsMyTurn()) return;
-        if (GameManager.Instance.IsEngineGame &&
-            (OperaGameController.Instance == null || !OperaGameController.Instance.CanHumanMove)) return;
-        // 1) If no piece is currently selected, try selecting the piece on that square
-        if (selectedSquare == null)
-        {
-            TrySelectSquare(clickedSquare);
-            return;
-        }
-
-        Move attemptedMove = new Move(selectedSquare, clickedSquare, GameManager.Instance.MyColor);
-
-        // 2) If we already have a selected piece, try moving it to the clicked square
-        // BoardManager.Instance.TryMovePiece(selectedSquare, clickedSquare);
-        Player me = GameManager.Instance.GetMyPlayer();
-        int result = me.OnMove(attemptedMove);
-
-        // If the result is -1 that means the move was not legal.
-        // Calling OnSquareClicked again with the newly last clicked square will reselct that square if it has
-        // the correct color piece on it
-        if (result < 0)
-        {
-            UnselectSquare();
-            OnSquareClicked(clickedSquare);
-        }
-        else
-        {
-            UnselectSquare();
-        }
+        if ((selectedSquare != null && !CanInteract) || Keyboard.current?.escapeKey.wasPressedThisFrame == true ||
+            Mouse.current?.rightButton.wasPressedThisFrame == true) UnselectSquare();
     }
-
-    private void TrySelectSquare(Square clickedSquare)
+    public void OnSquareClicked(Square square)
     {
-        // check if it's my turn and piece color matches me
-        if (!GameManager.Instance.IsMyTurn() || clickedSquare.Piece.GetColor() != GameManager.Instance.MyColor) { return; }
-
-        // Check if there's a piece on that square
-        if (clickedSquare.Piece.GetType() == PieceType.None)
-        {
-            // No piece to select
-            Debug.Log($"TrySelectSquare: No piece on square# {clickedSquare.Index}");
-            return;
-        }
-
-        selectedSquare = clickedSquare;
-
-        Square[] legalMoves = LegalMovesHandler.FindLegalMoves(GameManager.Instance.GameState, selectedSquare);
-
-        HighlightSquares(legalMoves);
+        if (square == null || !CanInteract || IsDragging) return;
+        if (selectedSquare == square) { UnselectSquare(); return; }
+        if (selectedSquare != null && TryMove(square)) return;
+        Select(square);
     }
-
-    private void HighlightSquares(Square[] squaresToHighlight)
+    private void Select(Square square)
     {
-        foreach (Square sq in squaresToHighlight)
+        UnselectSquare();
+        if (!CanInteract || square == null || square.Piece.GetColor() != GameManager.Instance.MyColor ||
+            square.Piece.GetType() == PieceType.None) return;
+        selectedSquare = square;
+        square.Renderer?.SetSelected(true);
+        var state = GameManager.Instance.GameState;
+        foreach (var target in LegalMovesHandler.FindLegalMoves(state, square))
         {
-            sq.Renderer.AddHighlight();
+            target.Renderer?.AddHighlight(BoardMoveIntent.IsCapture(state, square, target));
+            if (square.Piece.GetType() == PieceType.King && Mathf.Abs(square.Coord.file - target.Coord.file) == 2)
+            {
+                var rook = state.Board.GetSquareFromIndex(square.Coord.rank * 8 + (target.Coord.file > square.Coord.file ? 7 : 0));
+                rook.Renderer?.AddHighlight(false, true);
+            }
         }
+        OperaAudio.Play(OperaSound.Lift);
     }
-
+    private bool TryMove(Square target)
+    {
+        if (!CanInteract || selectedSquare == null || target == null) return false;
+        var state = GameManager.Instance.GameState;
+        var destination = BoardMoveIntent.Destination(state, selectedSquare, target);
+        if (!LegalMovesHandler.IsMoveLegal(state, destination, selectedSquare)) return false;
+        var move = new Move(selectedSquare, destination, GameManager.Instance.MyColor);
+        if (GameManager.Instance.GetMyPlayer().OnMove(move) < 0) return false;
+        UnselectSquare(); return true;
+    }
+    public bool BeginDrag(Square square, int pointerId)
+    {
+        if (!CanInteract || IsDragging || square == null || square.Piece.GetColor() != GameManager.Instance.MyColor ||
+            square.Piece.GetType() == PieceType.None) return false;
+        if (selectedSquare != square) Select(square);
+        else OperaAudio.Play(OperaSound.Lift);
+        draggedPiece = BoardRenderer.Instance.GetRendererFromIndex(square.Index);
+        if (draggedPiece == null) return false;
+        dragPointerId = pointerId; draggedPiece.SetLifted(true); return true;
+    }
+    public void DragTo(Vector2 screenPosition, Square target, int pointerId)
+    {
+        if (!IsDragging || pointerId != dragPointerId) return;
+        if (!CanInteract) { UnselectSquare(); return; }
+        var camera = Camera.main;
+        if (camera != null)
+        {
+            var position = camera.ScreenToWorldPoint(new Vector3(screenPosition.x, screenPosition.y, -camera.transform.position.z));
+            draggedPiece.transform.position = new Vector3(position.x, position.y, 0);
+        }
+        if (hoveredSquare == target) return;
+        if (hoveredSquare?.Renderer != null) hoveredSquare.Renderer.SetDropTarget(false); hoveredSquare = target;
+        if (target == null) return;
+        var state = GameManager.Instance.GameState;
+        var destination = BoardMoveIntent.Destination(state, selectedSquare, target);
+        if (LegalMovesHandler.IsMoveLegal(state, destination, selectedSquare)) target.Renderer?.SetDropTarget(true);
+    }
+    public void EndDrag(Square target, int pointerId)
+    {
+        if (!IsDragging || pointerId != dragPointerId) return;
+        ReturnPiece();
+        if (target != null && target != selectedSquare && TryMove(target)) return;
+        // Dropping on the origin, outside the board, or over UI preserves the
+        // position and selection, so the player can try again without a click.
+        OperaAudio.Play(OperaSound.Return);
+    }
+    private void ReturnPiece()
+    {
+        if (draggedPiece != null) draggedPiece.SetLifted(false);
+        draggedPiece = null;
+        if (hoveredSquare?.Renderer != null) hoveredSquare.Renderer.SetDropTarget(false); hoveredSquare = null;
+    }
     public void UnselectSquare()
     {
-        selectedSquare = null;
-        if (GameManager.Instance == null || GameManager.Instance.GameState == null) return;
-        // SquareHighlightManager.Instance.ClearAllHighlights();
-        var board = GameManager.Instance.GameState.Board;
-        foreach (Square sq in board.squares)
-        {
-            // A reviewed board has its own renderers; the live board may still
-            // reference Unity objects destroyed during the previous redraw.
-            if (sq.Renderer != null) sq.Renderer.RemoveHighlight();
-        }
+        ReturnPiece();
+        if (selectedSquare?.Renderer != null) selectedSquare.Renderer.SetSelected(false); selectedSquare = null;
+        if (GameManager.Instance?.GameState == null) return;
+        foreach (var square in GameManager.Instance.GameState.Board.squares)
+            if (square.Renderer != null) square.Renderer.RemoveHighlight();
     }
+    private void OnApplicationFocus(bool focused) { if (!focused) UnselectSquare(); }
+    private void OnDisable() => UnselectSquare();
+    private void OnDestroy() { if (Instance == this) Instance = null; }
 }

@@ -1,52 +1,48 @@
 using Core;
+using Opera;
 using UnityEngine;
 
 [RequireComponent(typeof(SpriteRenderer))]
 public class SquareRenderer : MonoBehaviour
 {
-    private SpriteRenderer spriteRenderer;
-    private Color DefaultColor;
-    private Color HighlightColor;
+    private SpriteRenderer face, marker, selection, hover;
+    private Color defaultColor, markerColor;
+    private bool lastMove;
     public Square squareData { get; private set; }
+    public bool IsLastMove => lastMove;
+    public bool IsHighlighted => marker != null && marker.enabled;
 
-    /// <summary>
-    /// Initialize this square renderer with the underlying Square data,
-    /// a single default sprite, and a color used to tint that sprite.
-    /// </summary>
-    public void Init(Square squareData, Sprite defaultSquareSprite, Color squareColor, float squareSize)
+    public void Init(Square square, Sprite defaultSquareSprite, Color color, float squareSize)
     {
-        this.squareData = squareData;
-        this.DefaultColor = squareColor;
-        HighlightColor = Color.Lerp(DefaultColor, new Color(0.95f, 0.78f, 0.25f), 0.65f);
-        spriteRenderer = GetComponent<SpriteRenderer>();
-        spriteRenderer.sprite = defaultSquareSprite;
-        if (spriteRenderer != null) spriteRenderer.color = DefaultColor;
-
-        gameObject.name = $"Square_{squareData.Coord.ToString()}-({squareData.Coord.ToVector2().x},{squareData.Coord.ToVector2().y})-{squareData.Index}";
-
-        // Add a square click handler upon creation to make the square selectable by the player
+        squareData = square; defaultColor = color;
+        markerColor = square.IsWhite ? OperaTheme.Hex("456851") : OperaTheme.Sage;
+        face = GetComponent<SpriteRenderer>(); face.sprite = OperaTheme.Wood; face.color = color; face.sortingOrder = 2;
+        transform.localPosition = new Vector3((square.Coord.file - 3.5f) * squareSize, (square.Coord.rank - 3.5f) * squareSize, 0);
+        transform.localScale = Vector3.one * squareSize;
+        gameObject.name = "Square " + square.Coord;
         gameObject.AddComponent<SquareClickHandler>();
-
-        // Position this square in the world
-        float xPos = squareData.Coord.file * squareSize;
-        float yPos = squareData.Coord.rank * squareSize;
-
-        transform.position = new Vector3(xPos - 3.5f, yPos - 3.5f, 0);
-
-        spriteRenderer.sortingOrder = 2;
-
-        BoxCollider2D collider = gameObject.AddComponent<BoxCollider2D>();
-        collider.size = spriteRenderer.bounds.size;
-
+        gameObject.AddComponent<BoxCollider2D>().size = Vector2.one;
+        marker = OperaTheme.World(transform, "Legal destination", OperaTheme.Disc, Vector2.zero, Vector2.one * .23f, markerColor, 5);
+        selection = OperaTheme.World(transform, "Selected piece", OperaTheme.Outline, Vector2.zero, Vector2.one * .98f, markerColor, 4);
+        hover = OperaTheme.World(transform, "Drop preview", OperaTheme.Outline, Vector2.zero, Vector2.one * .90f, OperaTheme.Ink, 6);
+        marker.enabled = selection.enabled = hover.enabled = false;
     }
-
-    public void AddHighlight()
+    public void AddHighlight(bool capture = false, bool castle = false)
     {
-        if (spriteRenderer != null) spriteRenderer.color = HighlightColor;
+        marker.sprite = castle ? OperaTheme.Outline : capture ? OperaTheme.Ring : OperaTheme.Disc;
+        marker.transform.localScale = Vector3.one * (castle ? .92f : capture ? .91f : .23f);
+        marker.color = new Color(markerColor.r, markerColor.g, markerColor.b, capture || castle ? .94f : .82f);
+        marker.enabled = true;
     }
-
+    public void SetSelected(bool selected) => selection.enabled = selected;
+    public void SetDropTarget(bool target) => hover.enabled = target;
+    public void SetLastMove(bool value)
+    {
+        lastMove = value; face.color = value ? Color.Lerp(defaultColor, OperaTheme.LastMove, .56f) : defaultColor;
+    }
     public void RemoveHighlight()
     {
-        if (spriteRenderer != null) spriteRenderer.color = DefaultColor;
+        marker.enabled = selection.enabled = hover.enabled = false;
+        // Last move belongs to the position, not the current selection.
     }
 }

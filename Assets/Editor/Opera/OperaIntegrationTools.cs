@@ -34,8 +34,7 @@ public static class OperaIntegrationTools
     [MenuItem("Opera/Validate rules and engine")]
     public static void Validate()
     {
-        OperaRulesChecks.Run();
-        OperaReviewChecks.Run();
+        OperaPresentationChecks.Run();
         CheckClient();
         Debug.Log("[Opera checks] All integration checks passed.");
     }
